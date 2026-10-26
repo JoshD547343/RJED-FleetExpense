@@ -1,0 +1,315 @@
+﻿@{
+    ViewData["Title"] = "Record Payment";
+    Layout = "~/Views/Shared/_LayoutAccounting.cshtml";
+}
+
+@section Styles {
+    <style>
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.75rem;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1.6fr;
+            gap: 1.5rem;
+        }
+
+        .form-card {
+            background: var(--card);
+            border-radius: 14px;
+            box-shadow: 0 2px 12px rgba(20,41,79,0.06);
+            overflow: hidden;
+        }
+
+        .form-card-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            background: var(--navy);
+        }
+
+            .form-card-header h6 {
+                font-size: 1rem;
+                font-weight: 700;
+                color: #fff;
+                margin: 0;
+                display: flex;
+                align-items: center;
+                gap: .5rem;
+            }
+
+        .form-card-body {
+            padding: 1.5rem;
+        }
+
+        .field-group {
+            margin-bottom: 1.1rem;
+        }
+
+            .field-group label {
+                display: block;
+                font-size: 0.75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: .5px;
+                color: var(--muted);
+                margin-bottom: 5px;
+            }
+
+            .field-group input, .field-group select, .field-group textarea {
+                width: 100%;
+                border: 1.5px solid var(--border);
+                border-radius: 8px;
+                padding: 9px 13px;
+                font-size: 0.875rem;
+                color: var(--text);
+                background: #f8faff;
+                outline: none;
+                transition: border-color .2s;
+            }
+
+                .field-group input:focus, .field-group select:focus, .field-group textarea:focus {
+                    border-color: var(--navy);
+                }
+
+            .field-group textarea {
+                resize: vertical;
+                min-height: 80px;
+            }
+
+        .field-hint {
+            font-size: 0.72rem;
+            color: var(--muted);
+            margin-top: 3px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            background: var(--navy);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 11px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background .2s;
+        }
+
+            .btn-submit:hover {
+                background: var(--navy-hover);
+            }
+
+        .section-card {
+            background: var(--card);
+            border-radius: 14px;
+            box-shadow: 0 2px 12px rgba(20,41,79,0.06);
+            overflow: hidden;
+        }
+
+        .section-card-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .section-card-header h6 {
+                font-size: 1rem;
+                font-weight: 700;
+                color: var(--navy);
+                margin: 0;
+                display: flex;
+                align-items: center;
+                gap: .5rem;
+            }
+
+        .acct-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .acct-table thead th {
+                background: var(--navy);
+                color: rgba(255,255,255,0.85);
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                letter-spacing: .6px;
+                font-weight: 600;
+                padding: 0.85rem 1.1rem;
+                text-align: left;
+            }
+
+            .acct-table tbody td {
+                padding: 0.85rem 1.1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: 0.88rem;
+                color: var(--text);
+            }
+
+            .acct-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .acct-table tbody tr:hover {
+                background: #f5f8ff;
+            }
+
+        .amount {
+            font-weight: 700;
+            color: var(--navy);
+        }
+
+        .badge-paid {
+            display: inline-block;
+            padding: 3px 11px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .ref-code {
+            font-family: 'Courier New', monospace;
+            background: #f0f2f7;
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            color: var(--navy);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--muted);
+        }
+
+            .empty-state i {
+                font-size: 2.5rem;
+                display: block;
+                margin-bottom: .75rem;
+                opacity: .4;
+            }
+
+       
+    </style>
+}
+
+<div class="page-header dashboard_animation" style="animation-delay:0.05s;">
+    <div>
+        <h4 class="fw-bold mb-0" style="color:var(--navy)">Record Payment</h4>
+        <small class="text-muted">Log transaction references for reimbursed expenses</small>
+    </div>
+</div>
+
+<div class="two-col">
+    <div class="form-card dashboard_animation" style="animation-delay:0.08s;">
+        <div class="form-card-header">
+            <h6><i class="bi bi-credit-card"></i> New Payment Record</h6>
+        </div>
+        <div class="form-card-body">
+            <form method="post" asp-action="RecordPayment">
+                @Html.AntiForgeryToken()
+                <div class="field-group">
+                    <label>Expense / Claim ID</label>
+                    <input type="text" name="expenseId" placeholder="e.g. EXP-2025-00123" required />
+                    <div class="field-hint">Enter the ID of the reimbursed expense</div>
+                </div>
+                <div class="field-group">
+                    <label>Employee</label>
+                    <select name="employeeId" required>
+                        <option value="">— Select Employee —</option>
+                        @if (ViewBag.Employees != null)
+                        {
+                            @foreach (var emp in ViewBag.Employees)
+                            {
+                                <option value="@emp.Id">@emp.FullName</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="field-group">
+                    <label>Payment Method</label>
+                    <select name="paymentMethod" required>
+                        <option value="">— Select Method —</option>
+                        <option value="BankTransfer">Bank Transfer</option>
+                        <option value="Check">Check</option>
+                        <option value="Cash">Cash</option>
+                        <option value="GCash">GCash</option>
+                        <option value="PayMaya">PayMaya</option>
+                    </select>
+                </div>
+                <div class="field-group">
+                    <label>Transaction / Reference No.</label>
+                    <input type="text" name="referenceNo" placeholder="e.g. TXN-20250601-001" required />
+                </div>
+                <div class="field-group">
+                    <label>Amount Paid (₱)</label>
+                    <input type="number" name="amountPaid" placeholder="0.00" step="0.01" min="0" required />
+                </div>
+                <div class="field-group">
+                    <label>Payment Date</label>
+                    <input type="date" name="paymentDate" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                </div>
+                <div class="field-group">
+                    <label>Remarks (Optional)</label>
+                    <textarea name="remarks" placeholder="Add any notes about this payment…"></textarea>
+                </div>
+                <button type="submit" class="btn-submit"><i class="bi bi-floppy"></i> Save Payment Record</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="section-card dashboard_animation" style="animation-delay:0.14s;">
+        <div class="section-card-header">
+            <h6><i class="bi bi-clock-history"></i> Recent Payment Records</h6>
+            <a asp-action="FinancialAuditLog" style="font-size:0.82rem;font-weight:600;color:var(--navy);text-decoration:none;">
+                View All <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+        @if (ViewBag.PaymentHistory != null && ((IEnumerable<dynamic>)ViewBag.PaymentHistory).Any())
+        {
+            <table class="acct-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Employee</th>
+                        <th>Reference No.</th>
+                        <th>Method</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in ViewBag.PaymentHistory)
+                    {
+                        <tr>
+                            <td>@((p.PaymentDate as DateTime?)?.ToString("MMM dd, yyyy"))</td>
+                            <td>@p.EmployeeName</td>
+                            <td><span class="ref-code">@p.ReferenceNo</span></td>
+                            <td>@p.PaymentMethod</td>
+                            <td class="amount">&#8369;@String.Format("{0:N2}", p.AmountPaid)</td>
+                            <td><span class="badge-paid">Paid</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="bi bi-credit-card"></i>
+                <p>No payment records yet.</p>
+            </div>
+        }
+    </div>
+</div>

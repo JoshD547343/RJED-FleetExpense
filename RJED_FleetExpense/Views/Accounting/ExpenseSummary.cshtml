@@ -1,0 +1,472 @@
+﻿@{
+    ViewData["Title"] = "Expense Summary";
+    Layout = "~/Views/Shared/_LayoutAccounting.cshtml";
+}
+
+@section Styles {
+    <style>
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.75rem;
+        }
+
+        .period-tabs {
+            display: flex;
+            gap: .5rem;
+            background: var(--card);
+            padding: .4rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(20,41,79,0.06);
+            margin-bottom: 1.75rem;
+        }
+
+        .period-tab {
+            padding: 7px 20px;
+            border-radius: 7px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-decoration: none;
+            transition: all .2s;
+        }
+
+            .period-tab.active, .period-tab:hover {
+                background: var(--navy);
+                color: #fff;
+            }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(5,1fr);
+            gap: 1rem;
+            margin-bottom: 1.75rem;
+        }
+
+        .kpi-card {
+            background: var(--card);
+            border-radius: 14px;
+            padding: 1.2rem;
+            box-shadow: 0 2px 12px rgba(20,41,79,0.06);
+            border-top: 3px solid var(--navy);
+            text-align: center;
+        }
+
+            .kpi-card:nth-child(2) {
+                border-top-color: var(--green);
+            }
+
+            .kpi-card:nth-child(3) {
+                border-top-color: var(--gold);
+            }
+
+            .kpi-card:nth-child(4) {
+                border-top-color: #e53935;
+            }
+
+            .kpi-card:nth-child(5) {
+                border-top-color: #7b1fa2;
+            }
+
+        .kpi-icon {
+            font-size: 1.6rem;
+            margin-bottom: .4rem;
+        }
+
+        .kpi-label {
+            font-size: 0.72rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            font-weight: 600;
+        }
+
+        .kpi-value {
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1.1;
+            margin-top: 2px;
+        }
+
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .section-card {
+            background: var(--card);
+            border-radius: 14px;
+            box-shadow: 0 2px 12px rgba(20,41,79,0.06);
+            overflow: hidden;
+            margin-bottom: 1.25rem;
+        }
+
+        .section-card-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .section-card-header h6 {
+                font-size: 1rem;
+                font-weight: 700;
+                color: var(--navy);
+                margin: 0;
+                display: flex;
+                align-items: center;
+                gap: .5rem;
+            }
+
+        .section-card-body {
+            padding: 1.5rem;
+        }
+
+        canvas {
+            width: 100% !important;
+        }
+
+        #trendChart {
+            max-height: 280px;
+        }
+
+        #categoryChart {
+            max-height: 240px;
+        }
+
+        .breakdown-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .breakdown-table th {
+                font-size: 0.73rem;
+                text-transform: uppercase;
+                letter-spacing: .5px;
+                color: var(--muted);
+                font-weight: 600;
+                padding: 0 0 .6rem 0;
+                text-align: left;
+            }
+
+                .breakdown-table th:last-child, .breakdown-table td:last-child {
+                    text-align: right;
+                }
+
+            .breakdown-table td {
+                padding: .55rem 0;
+                border-bottom: 1px solid var(--border);
+                font-size: 0.875rem;
+                color: var(--text);
+            }
+
+            .breakdown-table tr:last-child td {
+                border-bottom: none;
+            }
+
+        .cat-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 7px;
+            vertical-align: middle;
+        }
+
+        .cat-bar-wrap {
+            height: 5px;
+            background: #eef0f8;
+            border-radius: 10px;
+            overflow: hidden;
+            width: 90px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .cat-bar {
+            height: 100%;
+            border-radius: 10px;
+        }
+
+        .top-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+        }
+
+        .acct-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .acct-table thead th {
+                background: var(--navy);
+                color: rgba(255,255,255,0.85);
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                letter-spacing: .6px;
+                font-weight: 600;
+                padding: 0.75rem 1.1rem;
+                text-align: left;
+            }
+
+            .acct-table tbody td {
+                padding: 0.75rem 1.1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: 0.875rem;
+                color: var(--text);
+            }
+
+            .acct-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .acct-table tbody tr:hover {
+                background: #f5f8ff;
+            }
+
+        .amount {
+            font-weight: 700;
+            color: var(--navy);
+        }
+
+        .rank-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            font-size: 0.72rem;
+            font-weight: 700;
+            background: #e8edf7;
+            color: var(--navy);
+        }
+
+            .rank-badge.gold-rank {
+                background: #fef9ec;
+                color: var(--gold);
+            }
+
+            .rank-badge.silver-rank {
+                background: #f5f5f5;
+                color: #757575;
+            }
+
+            .rank-badge.bronze-rank {
+                background: #fbe9e7;
+                color: #bf360c;
+            }
+
+        
+    </style>
+}
+
+<div class="page-header dashboard_animation" style="animation-delay:0.05s;">
+    <div>
+        <h4 class="fw-bold mb-0" style="color:var(--navy)">Expense Summary</h4>
+        <small class="text-muted">Visual overview of expense trends and breakdowns</small>
+    </div>
+    <a asp-action="GenerateExpenseReport"
+       style="background:var(--navy);color:#fff;border:none;border-radius:8px;padding:8px 18px;font-weight:600;text-decoration:none;font-size:0.875rem;display:flex;align-items:center;gap:6px;">
+        <i class="bi bi-download"></i> Export
+    </a>
+</div>
+
+<div class="period-tabs dashboard_animation" style="animation-delay:0.08s;">
+    <a href="?period=week" class="period-tab @(ViewBag.Period == "week" ? "active" : "")">This Week</a>
+    <a href="?period=month" class="period-tab @(ViewBag.Period == "month" || ViewBag.Period == null ? "active" : "")">This Month</a>
+    <a href="?period=quarter" class="period-tab @(ViewBag.Period == "quarter" ? "active" : "")">This Quarter</a>
+    <a href="?period=year" class="period-tab @(ViewBag.Period == "year" ? "active" : "")">This Year</a>
+</div>
+
+<div class="kpi-grid">
+    <div class="kpi-card dashboard_animation" style="animation-delay:0s;">
+        <div class="kpi-icon">📋</div>
+        <div class="kpi-label">Total Claims</div>
+        <div class="kpi-value">@(ViewBag.TotalClaims ?? 0)</div>
+    </div>
+    <div class="kpi-card dashboard_animation" style="animation-delay:0.04s;">
+        <div class="kpi-icon">✅</div>
+        <div class="kpi-label">Reimbursed</div>
+        <div class="kpi-value">&#8369;@String.Format("{0:N0}", ViewBag.TotalReimbursed ?? 0)</div>
+    </div>
+    <div class="kpi-card dashboard_animation" style="animation-delay:0.08s;">
+        <div class="kpi-icon">⏳</div>
+        <div class="kpi-label">Pending Amount</div>
+        <div class="kpi-value">&#8369;@String.Format("{0:N0}", ViewBag.TotalPending ?? 0)</div>
+    </div>
+    <div class="kpi-card dashboard_animation" style="animation-delay:0.12s;">
+        <div class="kpi-icon">❌</div>
+        <div class="kpi-label">Rejected Claims</div>
+        <div class="kpi-value">@(ViewBag.TotalRejected ?? 0)</div>
+    </div>
+    <div class="kpi-card dashboard_animation" style="animation-delay:0.16s;">
+        <div class="kpi-icon">📊</div>
+        <div class="kpi-label">Avg. Claim</div>
+        <div class="kpi-value">&#8369;@String.Format("{0:N0}", ViewBag.AvgClaim ?? 0)</div>
+    </div>
+</div>
+
+<div class="charts-row">
+    <div class="section-card dashboard_animation" style="animation-delay:0.2s;">
+        <div class="section-card-header">
+            <h6><i class="bi bi-graph-up"></i> Expense Trend</h6>
+        </div>
+        <div class="section-card-body">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+    <div class="section-card dashboard_animation" style="animation-delay:0.24s;">
+        <div class="section-card-header">
+            <h6><i class="bi bi-pie-chart"></i> By Category</h6>
+        </div>
+        <div class="section-card-body">
+            <canvas id="categoryChart"></canvas>
+            <hr style="border-color:var(--border);margin:1rem 0;" />
+            <table class="breakdown-table">
+                <thead>
+                    <tr><th>Category</th><th>Distribution</th><th>Amount</th></tr>
+                </thead>
+                <tbody>
+                    @{
+                        var catColors = new[] { "#14294f", "#4caf50", "#c9a84c", "#e53935", "#7b1fa2", "#1565c0" };
+                        int ci = 0;
+                    }
+                    @if (ViewBag.CategoryBreakdown != null)
+                    {
+                        @foreach (var cat in ViewBag.CategoryBreakdown)
+                        {
+                            <tr>
+                                <td><span class="cat-dot" style="background:@catColors[ci % catColors.Length]"></span>@cat.Category</td>
+                                <td>
+                                    <div class="cat-bar-wrap">
+                                        <div class="cat-bar" style="width:@cat.Pct%;background:@catColors[ci % catColors.Length]"></div>
+                                    </div>
+                                    <span style="font-size:0.75rem;color:var(--muted);margin-left:6px;">@cat.Pct%</span>
+                                </td>
+                                <td class="amount">&#8369;@String.Format("{0:N0}", cat.Total)</td>
+                            </tr>
+                            ci++;
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="top-grid">
+    <div class="section-card dashboard_animation" style="animation-delay:0.28s;">
+        <div class="section-card-header">
+            <h6><i class="bi bi-trophy"></i> Top Claimants</h6>
+        </div>
+        <table class="acct-table">
+            <thead>
+                <tr><th>Rank</th><th>Employee</th><th>Claims</th><th>Total</th></tr>
+            </thead>
+            <tbody>
+                @{
+                    int rank = 1;
+                }
+                @if (ViewBag.TopClaimants != null)
+                {
+                    @foreach (var emp in ViewBag.TopClaimants)
+                    {
+                        var rankClass = rank == 1 ? "gold-rank" : rank == 2 ? "silver-rank" : rank == 3 ? "bronze-rank" : "";
+                        <tr>
+                            <td><span class="rank-badge @rankClass">@rank</span></td>
+                            <td>
+                                <div style="font-weight:600;color:var(--navy);">@emp.EmployeeName</div>
+                                <div style="font-size:0.75rem;color:var(--muted);">@emp.Department</div>
+                            </td>
+                            <td>@emp.ClaimCount</td>
+                            <td class="amount">&#8369;@String.Format("{0:N0}", emp.Total)</td>
+                        </tr>
+                        rank++;
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="section-card dashboard_animation" style="animation-delay:0.32s;">
+        <div class="section-card-header">
+            <h6><i class="bi bi-building"></i> By Department</h6>
+        </div>
+        <table class="acct-table">
+            <thead>
+                <tr><th>Department</th><th>Claims</th><th>Total Amount</th></tr>
+            </thead>
+            <tbody>
+                @if (ViewBag.DeptBreakdown != null)
+                {
+                    @foreach (var dept in ViewBag.DeptBreakdown)
+                    {
+                        <tr>
+                            <td style="font-weight:600;color:var(--navy);">@dept.Department</td>
+                            <td>@dept.ClaimCount</td>
+                            <td class="amount">&#8369;@String.Format("{0:N0}", dept.Total)</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        new Chart(document.getElementById('trendChart').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(ViewBag.TrendLabels ?? new string[0])),
+                datasets: [{
+                    label: 'Total Expenses (₱)',
+                    data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(ViewBag.TrendData ?? new decimal[0])),
+                    borderColor: '#14294f',
+                    backgroundColor: 'rgba(20,41,79,0.08)',
+                    borderWidth: 2.5,
+                    pointBackgroundColor: '#14294f',
+                    pointRadius: 4,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: v => '₱' + v.toLocaleString() }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('categoryChart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(
+                                    (ViewBag.CategoryBreakdown as IEnumerable<dynamic>)?.Select(c => (string)c.Category).ToArray() ?? new string[0])),
+            datasets: [{
+                data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(
+                                        (ViewBag.CategoryBreakdown as IEnumerable<dynamic>)?.Select(c => (decimal)c.Total).ToArray() ?? new decimal[0])),
+                backgroundColor: ['#14294f','#4caf50','#c9a84c','#e53935','#7b1fa2','#1565c0'],
+                borderWidth: 3, borderColor: '#fff'
+            }]
+        },
+        options: {
+            cutout: '60%',
+            plugins: { legend: { display: false } },
+            animation: { animateRotate: true, duration: 900 }
+        }
+    });
+</script>
+}

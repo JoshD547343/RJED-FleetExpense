@@ -1,0 +1,523 @@
+﻿@model IEnumerable<RJED_FleetExpense.Models.Expense>
+@{
+    ViewData["Title"] = "Expense";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+
+    var expenses = Model.ToList();
+
+    var chartLabels = ViewBag.ChartLabels as List<string> ?? new List<string>();
+    var chartTotals = ViewBag.ChartTotals as List<decimal> ?? new List<decimal>();
+
+    decimal totalReimbursed = ViewBag.TotalReimbursed ?? 0m;
+    decimal thisMonth = ViewBag.ReimbursedThisMonth ?? 0m;
+    decimal avgClaim = ViewBag.AverageClaim ?? 0m;
+    int reimbursedCount = ViewBag.ReimbursedCount ?? 0;
+
+    bool hasFilters = !string.IsNullOrEmpty(ViewBag.Search as string)
+                   || !string.IsNullOrEmpty(ViewBag.DateFrom as string)
+                   || !string.IsNullOrEmpty(ViewBag.DateTo as string);
+}
+
+@section Styles {
+    <style>
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.4rem;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 4px solid transparent;
+            border-radius: 12px;
+            padding: 1.05rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            opacity: 0;
+            transform: translateY(10px);
+            animation: rise 0.38s ease forwards;
+        }
+
+            .stat-card:nth-child(1) {
+                border-left-color: var(--green);
+                animation-delay: 0s;
+            }
+
+            .stat-card:nth-child(2) {
+                border-left-color: #3b82f6;
+                animation-delay: 0.06s;
+            }
+
+            .stat-card:nth-child(3) {
+                border-left-color: #ca8a04;
+                animation-delay: 0.12s;
+            }
+
+            .stat-card:nth-child(4) {
+                border-left-color: var(--red);
+                animation-delay: 0.18s;
+            }
+
+        .stat-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .stat-label {
+            font-size: 0.68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .stat-sub {
+            font-size: 0.7rem;
+            color: var(--muted);
+        }
+
+        .stat-value {
+            margin-left: auto;
+            text-align: right;
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1.1;
+        }
+
+        .sc {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            margin-bottom: 1.4rem;
+        }
+
+        .sc-head {
+            padding: 0.85rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: .6rem;
+        }
+
+        .sc-title {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .chart-wrap {
+            padding: 1.1rem 1.2rem;
+            height: 280px;
+        }
+
+        /* Filters */
+        .filter-bar {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-wrap {
+            position: relative;
+        }
+
+            .search-wrap i {
+                position: absolute;
+                left: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--muted);
+                font-size: 0.8rem;
+            }
+
+        .filter-input {
+            padding: 6px 11px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.82rem;
+            background: #fff;
+            color: var(--text);
+        }
+
+        .search-input {
+            padding-left: 30px;
+            width: 230px;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: var(--ink-2);
+        }
+
+        .btn-filter {
+            background: var(--ink);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 7px 14px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-clear {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--green);
+            text-decoration: none;
+            padding: 6px 4px;
+        }
+
+        /* Table */
+        .ex-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .ex-table thead th {
+                background: #f8faff;
+                color: var(--muted);
+                font-size: 0.66rem;
+                text-transform: uppercase;
+                letter-spacing: .6px;
+                padding: 0.7rem 1rem;
+                text-align: left;
+                white-space: nowrap;
+            }
+
+            .ex-table tbody td {
+                padding: 0.78rem 1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: .84rem;
+                vertical-align: middle;
+            }
+
+            .ex-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .ex-table tbody tr:hover {
+                background: #f8faff;
+            }
+
+        .expense-id {
+            color: var(--muted);
+            font-size: .78rem;
+            font-family: "Consolas", monospace;
+            white-space: nowrap;
+        }
+
+        .user-avatar-sm {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: var(--ink-3);
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .type-chip {
+            display: inline-block;
+            background: #f1f5f9;
+            color: var(--ink);
+            padding: 2px 9px;
+            border-radius: 6px;
+            font-size: 0.76rem;
+            font-weight: 600;
+        }
+
+        .plate {
+            font-family: "Consolas", monospace;
+            font-size: 0.8rem;
+        }
+
+        .desc-cell {
+            max-width: 220px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--muted);
+        }
+
+        .amt {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-weight: 700;
+            color: var(--ink);
+            white-space: nowrap;
+        }
+
+        .st {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .st-ok {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .sc-foot {
+            padding: .75rem 1.2rem;
+            border-top: 1px solid var(--border);
+            font-size: .78rem;
+            color: var(--muted);
+        }
+
+        .empty-box {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: var(--muted);
+        }
+
+            .empty-box i {
+                font-size: 2rem;
+                opacity: .25;
+                display: block;
+                margin-bottom: .5rem;
+            }
+
+        @@keyframes rise {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@media (max-width: 1200px) {
+            .stat-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @@media (max-width: 575px) {
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .search-input {
+                width: 100%;
+            }
+        }
+    </style>
+}
+
+<!-- Stat Cards -->
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#ecfdf5;color:var(--green)">
+            <i class="bi bi-cash-coin"></i>
+        </div>
+        <div>
+            <div class="stat-label">Total Reimbursed</div>
+            <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-value">&#8369;@totalReimbursed.ToString("N0")</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#f0f9ff;color:#3b82f6">
+            <i class="bi bi-receipt-cutoff"></i>
+        </div>
+        <div>
+            <div class="stat-label">Reimbursed Claims</div>
+            <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-value">@reimbursedCount</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fefce8;color:#ca8a04">
+            <i class="bi bi-calendar-check"></i>
+        </div>
+        <div>
+            <div class="stat-label">This Month</div>
+            <div class="stat-sub">@DateTime.Now.ToString("MMMM yyyy")</div>
+        </div>
+        <div class="stat-value">&#8369;@thisMonth.ToString("N0")</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fef2f2;color:var(--red)">
+            <i class="bi bi-calculator"></i>
+        </div>
+        <div>
+            <div class="stat-label">Average Claim</div>
+            <div class="stat-sub">Per reimbursement</div>
+        </div>
+        <div class="stat-value">&#8369;@avgClaim.ToString("N0")</div>
+    </div>
+</div>
+
+<!-- Trend Chart -->
+<div class="sc">
+    <div class="sc-head">
+        <h6 class="sc-title"><i class="bi bi-graph-up"></i> Reimbursement Trend</h6>
+        <small class="text-muted">Last 6 months</small>
+    </div>
+    <div class="chart-wrap">
+        <canvas id="trendChart"></canvas>
+    </div>
+</div>
+
+<!-- Expense Records -->
+<div class="sc">
+    <div class="sc-head">
+        <h6 class="sc-title"><i class="bi bi-list-ul"></i> Reimbursed Expenses</h6>
+
+        <form method="get" action="/Admin/Dashboard/Expense" class="filter-bar">
+            <div class="search-wrap">
+                <i class="bi bi-search"></i>
+                <input type="text" name="search" class="filter-input search-input"
+                       placeholder="Search employee, plate, type..." value="@ViewBag.Search" />
+            </div>
+            <input type="date" name="dateFrom" class="filter-input" value="@ViewBag.DateFrom" title="From date" />
+            <input type="date" name="dateTo" class="filter-input" value="@ViewBag.DateTo" title="To date" />
+            <button type="submit" class="btn-filter"><i class="bi bi-funnel"></i> Filter</button>
+            @if (hasFilters)
+            {
+                <a href="/Admin/Dashboard/Expense" class="btn-clear">Clear</a>
+            }
+        </form>
+    </div>
+
+    @if (expenses.Any())
+    {
+        <div style="overflow-x:auto">
+            <table class="ex-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Employee</th>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Plate</th>
+                        <th>Description</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var exp in expenses)
+                    {
+                        var name = exp.User?.FullName ?? exp.User?.Email ?? "Unknown";
+                        var initials = exp.User?.FullName != null
+                        ? string.Concat(exp.User.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => w[0].ToString().ToUpper()))
+                        : "?";
+
+                        <tr>
+                            <td class="expense-id">EXP-@exp.Id.ToString("D4")</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="user-avatar-sm">@initials</div>
+                                    <div>
+                                        <div style="font-weight:600;">@name</div>
+                                        <small class="text-muted">@(exp.User?.Department ?? "")</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="white-space:nowrap;color:var(--muted);font-size:0.8rem">@exp.ExpenseDate.ToString("MMM dd, yyyy")</td>
+                            <td><span class="type-chip">@exp.ExpenseType</span></td>
+                            <td class="plate">@(string.IsNullOrWhiteSpace(exp.PlateNumber) ? "—" : exp.PlateNumber)</td>
+                            <td class="desc-cell" title="@exp.Description">@(string.IsNullOrWhiteSpace(exp.Description) ? "—" : exp.Description)</td>
+                            <td class="amt">&#8369;@exp.Amount.ToString("N2")</td>
+                            <td><span class="st st-ok"><i class="bi bi-check-circle-fill"></i> Reimbursed</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="sc-foot">Showing @expenses.Count reimbursed expense@(expenses.Count == 1 ? "" : "s")</div>
+    }
+    else
+    {
+        <div class="empty-box">
+            <i class="bi bi-inbox"></i>
+            <p class="mb-0">@(hasFilters ? "No reimbursed expenses match your filters." : "No expenses have been reimbursed yet.")</p>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(chartLabels));
+        const totals = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(chartTotals));
+
+        new Chart(document.getElementById('trendChart').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Reimbursed',
+                    data: totals,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16,185,129,0.10)',
+                    fill: true,
+                    tension: 0.35,
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#10b981'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => 'Reimbursed: ₱' + Number(ctx.parsed.y).toLocaleString('en-PH', { minimumFractionDigits: 2 })
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#eef0f8' },
+                        ticks: { callback: v => '₱' + Number(v).toLocaleString('en-PH') }
+                    },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    </script>
+}

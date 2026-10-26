@@ -1,0 +1,821 @@
+﻿@model IEnumerable<RJED_FleetExpense.Models.AuditLog>
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "Financial Audit Log";
+    Layout = "~/Views/Shared/_LayoutAccounting.cshtml";
+
+    var search = ViewBag.Search as string ?? "";
+    var actionType = ViewBag.ActionType as string ?? "";
+    var tableAffected = ViewBag.TableAffected as string ?? "";
+    var dateFrom = ViewBag.DateFrom as string ?? "";
+    var dateTo = ViewBag.DateTo as string ?? "";
+    var currentPage = (int)(ViewBag.Page ?? 1);
+    var totalPages = (int)(ViewBag.TotalPages ?? 1);
+    var total = (int)(ViewBag.Total ?? 0);
+    var tables = ViewBag.Tables as List<string> ?? new List<string>();
+    var actionTypes = ViewBag.ActionTypes as List<string> ?? new List<string>();
+    var logs = Model ?? Enumerable.Empty<RJED_FleetExpense.Models.AuditLog>();
+
+    var totalEntries = (int)(ViewBag.TotalEntries ?? 0);
+    var reimbCount = (int)(ViewBag.ReimbursementsProcessed ?? 0);
+    var paymentsCount = (int)(ViewBag.PaymentsUpdated ?? 0);
+    var todayCount = (int)(ViewBag.ActivityToday ?? 0);
+    var totalPaid = (decimal)(ViewBag.TotalPaid ?? 0m);
+    var peso = CultureInfo.GetCultureInfo("en-US");
+
+    bool hasFilters = !string.IsNullOrWhiteSpace(search) || !string.IsNullOrWhiteSpace(actionType)
+                      || !string.IsNullOrWhiteSpace(tableAffected) || !string.IsNullOrWhiteSpace(dateFrom)
+                      || !string.IsNullOrWhiteSpace(dateTo);
+}
+
+@section Styles {
+    <style>
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.4rem;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 4px solid transparent;
+            border-radius: 12px;
+            padding: 1.05rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            opacity: 0;
+            transform: translateY(10px);
+            animation: rise 0.38s ease forwards;
+        }
+
+            .stat-card:nth-child(1) {
+                border-left-color: #3b82f6;
+                animation-delay: 0s;
+            }
+
+            .stat-card:nth-child(2) {
+                border-left-color: var(--green);
+                animation-delay: 0.06s;
+            }
+
+            .stat-card:nth-child(3) {
+                border-left-color: #ca8a04;
+                animation-delay: 0.12s;
+            }
+
+            .stat-card:nth-child(4) {
+                border-left-color: #ef4444;
+                animation-delay: 0.18s;
+            }
+
+        .stat-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .stat-label {
+            font-size: 0.68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .stat-sub {
+            font-size: 0.7rem;
+            color: var(--muted);
+        }
+
+        .stat-value {
+            margin-left: auto;
+            text-align: right;
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1.1;
+        }
+
+        .sc {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            margin-bottom: 1.4rem;
+        }
+
+        .sc-head {
+            padding: 0.85rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: .6rem;
+        }
+
+        .sc-title {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sc-body {
+            padding: 1.1rem 1.2rem;
+        }
+
+        .range-label {
+            font-size: .78rem;
+            color: var(--muted);
+        }
+
+        /* Presets */
+        .presets {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .preset {
+            border: 1.5px solid var(--border);
+            background: var(--slate);
+            color: var(--muted);
+            font-size: .74rem;
+            font-weight: 600;
+            border-radius: 20px;
+            padding: 3px 12px;
+            cursor: pointer;
+        }
+
+            .preset:hover {
+                color: var(--ink);
+                border-color: var(--ink-2);
+            }
+
+        /* Filters */
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 0.9rem;
+            align-items: end;
+        }
+
+            .filter-grid .wide {
+                grid-column: span 2;
+            }
+
+        .field-group label {
+            display: block;
+            font-size: .68rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            margin-bottom: 4px;
+        }
+
+        .field-group input, .field-group select {
+            width: 100%;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 7px 11px;
+            font-size: .84rem;
+            color: var(--text);
+            background: #fff;
+            outline: none;
+        }
+
+            .field-group input:focus, .field-group select:focus {
+                border-color: var(--ink-2);
+            }
+
+        .search-wrap {
+            position: relative;
+        }
+
+            .search-wrap i {
+                position: absolute;
+                left: 11px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--muted);
+                font-size: .8rem;
+                pointer-events: none;
+            }
+
+            .search-wrap input {
+                padding-left: 32px;
+            }
+
+        .filter-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: .6rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+            .filter-actions .spacer {
+                flex: 1;
+            }
+
+        .btn-main {
+            background: var(--ink);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: .82rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+            .btn-main:hover {
+                color: #fff;
+                opacity: .9;
+            }
+
+        .btn-act {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 7px 14px;
+            border-radius: 8px;
+            border: 1.5px solid var(--border);
+            background: var(--slate);
+            color: var(--muted);
+            font-size: .82rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+            .btn-act:hover {
+                color: var(--ink);
+                border-color: var(--ink-2);
+            }
+
+        .btn-green {
+            background: #ecfdf5;
+            color: #065f46;
+            border-color: #a7f3d0;
+        }
+
+            .btn-green:hover {
+                color: #065f46;
+                border-color: #6ee7b7;
+            }
+
+        /* Table */
+        .table-scroll {
+            overflow-x: auto;
+        }
+
+        .ex-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .ex-table thead th {
+                background: #f8faff;
+                color: var(--muted);
+                font-size: 0.66rem;
+                text-transform: uppercase;
+                letter-spacing: .6px;
+                padding: 0.7rem 1rem;
+                text-align: left;
+                white-space: nowrap;
+            }
+
+            .ex-table tbody td {
+                padding: 0.78rem 1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: .84rem;
+                vertical-align: middle;
+            }
+
+            .ex-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .ex-table tbody tr:hover {
+                background: #f8faff;
+            }
+
+        .ts-date {
+            font-weight: 600;
+            color: var(--ink);
+            white-space: nowrap;
+        }
+
+        .ts-time {
+            font-size: .74rem;
+            color: var(--muted);
+        }
+
+        .user-cell {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+        }
+
+        .user-avatar-sm {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            background: var(--ink-3);
+            color: #fff;
+            font-size: .75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .user-email {
+            font-weight: 600;
+            color: var(--ink);
+            font-size: .83rem;
+        }
+
+        .st {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: .7rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .b-green {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .b-info {
+            background: #ecfeff;
+            color: #0e7490;
+            border: 1px solid #a5f3fc;
+        }
+
+        .b-red {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .b-blue {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+
+        .b-amber {
+            background: #fffbeb;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        .b-gray {
+            background: #f1f5f9;
+            color: var(--muted);
+            border: 1px solid var(--border);
+        }
+
+        .table-chip {
+            display: inline-block;
+            padding: 2px 9px;
+            border-radius: 6px;
+            background: #f1f5f9;
+            color: var(--ink);
+            font-size: .74rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .details-cell {
+            min-width: 260px;
+            max-width: 460px;
+            line-height: 1.4;
+        }
+
+        /* Pagination */
+        .pager {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: .75rem;
+            padding: .75rem 1.2rem;
+            border-top: 1px solid var(--border);
+            background: #f8faff;
+        }
+
+        .pager-info {
+            font-size: .78rem;
+            color: var(--muted);
+        }
+
+        .pager-links {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+            .pager-links a, .pager-links span {
+                min-width: 32px;
+                padding: 5px 11px;
+                text-align: center;
+                border-radius: 8px;
+                font-size: .78rem;
+                font-weight: 600;
+                text-decoration: none;
+                border: 1.5px solid var(--border);
+                background: #fff;
+                color: var(--ink);
+            }
+
+                .pager-links a:hover {
+                    border-color: var(--ink-2);
+                }
+
+            .pager-links .active {
+                background: var(--ink);
+                color: #fff;
+                border-color: var(--ink);
+            }
+
+            .pager-links .disabled {
+                opacity: .45;
+                cursor: not-allowed;
+            }
+
+        .empty-box {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--muted);
+        }
+
+            .empty-box i {
+                font-size: 2rem;
+                opacity: .25;
+                display: block;
+                margin-bottom: .5rem;
+            }
+
+            .empty-box p {
+                font-weight: 600;
+                margin-bottom: .2rem;
+                color: var(--text);
+            }
+
+        @@keyframes rise {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@media (max-width: 1200px) {
+            .stat-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @@media (max-width: 576px) {
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-grid .wide {
+                grid-column: span 1;
+            }
+
+            .filter-actions .spacer {
+                display: none;
+            }
+        }
+    </style>
+}
+
+@* ============ STAT CARDS ============ *@
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#f0f9ff;color:#3b82f6"><i class="bi bi-journal-text"></i></div>
+        <div>
+            <div class="stat-label">Total Entries</div>
+            <div class="stat-sub">Expenses &amp; reimbursements</div>
+        </div>
+        <div class="stat-value">@totalEntries.ToString("N0", peso)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#ecfdf5;color:var(--green)"><i class="bi bi-cash-coin"></i></div>
+        <div>
+            <div class="stat-label">Reimbursements</div>
+            <div class="stat-sub">Total paid &#8369;@totalPaid.ToString("N2", peso)</div>
+        </div>
+        <div class="stat-value">@reimbCount.ToString("N0", peso)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fefce8;color:#ca8a04"><i class="bi bi-pencil-square"></i></div>
+        <div>
+            <div class="stat-label">Payments Updated</div>
+            <div class="stat-sub">Reference / date corrections</div>
+        </div>
+        <div class="stat-value">@paymentsCount.ToString("N0", peso)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fef2f2;color:#ef4444"><i class="bi bi-activity"></i></div>
+        <div>
+            <div class="stat-label">Activity Today</div>
+            <div class="stat-sub">@DateTime.Now.ToString("MMM dd, yyyy")</div>
+        </div>
+        <div class="stat-value">@todayCount.ToString("N0", peso)</div>
+    </div>
+</div>
+
+@* ============ FILTERS ============ *@
+<div class="sc">
+    <div class="sc-head">
+        <h6 class="sc-title"><i class="bi bi-sliders"></i> Filters</h6>
+        <div class="presets">
+            <button type="button" class="preset" data-range="today">Today</button>
+            <button type="button" class="preset" data-range="week">This week</button>
+            <button type="button" class="preset" data-range="month">This month</button>
+            <button type="button" class="preset" data-range="year">This year</button>
+        </div>
+    </div>
+    <div class="sc-body">
+        <form method="get" asp-action="FinancialAuditLog" id="searchForm">
+            <div class="filter-grid">
+                <div class="field-group wide">
+                    <label for="searchInput">Search</label>
+                    <div class="search-wrap">
+                        <i class="bi bi-search"></i>
+                        <input type="text" name="search" id="searchInput"
+                               placeholder="User, reference, expense ID..."
+                               value="@search" autocomplete="off" />
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label for="actionType">Action</label>
+                    <select name="actionType" id="actionType">
+                        <option value="">All actions</option>
+                        @foreach (var a in actionTypes)
+                        {
+                            <option value="@a" selected="@(actionType == a)">@a</option>
+                        }
+                    </select>
+                </div>
+                <div class="field-group">
+                    <label for="tableAffected">Table</label>
+                    <select name="tableAffected" id="tableAffected">
+                        <option value="">All tables</option>
+                        @foreach (var t in tables)
+                        {
+                            <option value="@t" selected="@(tableAffected == t)">@t</option>
+                        }
+                    </select>
+                </div>
+                <div class="field-group">
+                    <label for="dateFrom">Date from</label>
+                    <input type="date" id="dateFrom" name="dateFrom" value="@dateFrom" />
+                </div>
+                <div class="field-group">
+                    <label for="dateTo">Date to</label>
+                    <input type="date" id="dateTo" name="dateTo" value="@dateTo" />
+                </div>
+            </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="btn-main">
+                    <i class="bi bi-funnel-fill"></i> Apply filters
+                </button>
+                @if (hasFilters)
+                {
+                    <a asp-action="FinancialAuditLog" class="btn-act">
+                        <i class="bi bi-x-lg"></i> Clear
+                    </a>
+                }
+                <span class="spacer"></span>
+                <a asp-action="FinancialAuditLog" class="btn-act">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </a>
+                <a asp-action="ExportFinancialAuditLog"
+                   asp-route-search="@search"
+                   asp-route-actionType="@actionType"
+                   asp-route-tableAffected="@tableAffected"
+                   asp-route-dateFrom="@dateFrom"
+                   asp-route-dateTo="@dateTo" class="btn-act btn-green">
+                    <i class="bi bi-filetype-csv"></i> Export to CSV
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* ============ TABLE ============ *@
+<div class="sc">
+    <div class="sc-head">
+        <h6 class="sc-title"><i class="bi bi-table"></i> Activity Log</h6>
+        <span class="range-label">
+            Showing <strong>@logs.Count()</strong> of <strong>@total.ToString("N0", peso)</strong> records
+            @if (!string.IsNullOrWhiteSpace(search))
+            {
+                <span>matching &ldquo;@search&rdquo;</span>
+            }
+        </span>
+    </div>
+
+    @if (!logs.Any())
+    {
+        <div class="empty-box">
+            <i class="bi bi-journal-x"></i>
+            <p>No financial activity found</p>
+            <small>
+                @(hasFilters ? "Try widening the date range or clearing a filter." : "Actions will appear here as they happen.")
+            </small>
+        </div>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table class="ex-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Processed by</th>
+                        <th>Action</th>
+                        <th>Table</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var log in logs)
+                    {
+                        var local = log.Timestamp.ToLocalTime();
+                        var email = log.ApplicationUser?.Email ?? "Unknown";
+                        <tr>
+                            <td>
+                                <div class="ts-date">@local.ToString("MMM dd, yyyy")</div>
+                                <div class="ts-time">@local.ToString("HH:mm")</div>
+                            </td>
+                            <td>
+                                <div class="user-cell">
+                                    <span class="user-avatar-sm">@(email.Substring(0, 1).ToUpper())</span>
+                                    <span class="user-email">@email</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="st @GetActionBadgeClass(log.ActionType)">
+                                    <i class="bi @GetActionIcon(log.ActionType)"></i>@log.ActionType
+                                </span>
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(log.TableAffected))
+                                {
+                                    <span class="table-chip">@log.TableAffected</span>
+                                }
+                            </td>
+                            <td class="details-cell">@log.Details</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (totalPages > 1)
+        {
+            <div class="pager">
+                <div class="pager-info">Page @currentPage of @totalPages</div>
+                <nav aria-label="Financial audit log pagination" class="pager-links">
+                    @if (currentPage <= 1)
+                    {
+                        <span class="disabled">Previous</span>
+                    }
+                    else
+                    {
+                        <a asp-action="FinancialAuditLog"
+                           asp-route-search="@search" asp-route-actionType="@actionType"
+                           asp-route-tableAffected="@tableAffected"
+                           asp-route-dateFrom="@dateFrom" asp-route-dateTo="@dateTo"
+                           asp-route-page="@(currentPage - 1)">Previous</a>
+                    }
+
+                    @for (int p = Math.Max(1, currentPage - 2); p <= Math.Min(totalPages, currentPage + 2); p++)
+                    {
+                        if (p == currentPage)
+                        {
+                            <span class="active">@p</span>
+                        }
+                        else
+                        {
+                            <a asp-action="FinancialAuditLog"
+                               asp-route-search="@search" asp-route-actionType="@actionType"
+                               asp-route-tableAffected="@tableAffected"
+                               asp-route-dateFrom="@dateFrom" asp-route-dateTo="@dateTo"
+                               asp-route-page="@p">@p</a>
+                        }
+                    }
+
+                    @if (currentPage >= totalPages)
+                    {
+                        <span class="disabled">Next</span>
+                    }
+                    else
+                    {
+                        <a asp-action="FinancialAuditLog"
+                           asp-route-search="@search" asp-route-actionType="@actionType"
+                           asp-route-tableAffected="@tableAffected"
+                           asp-route-dateFrom="@dateFrom" asp-route-dateTo="@dateTo"
+                           asp-route-page="@(currentPage + 1)">Next</a>
+                    }
+                </nav>
+            </div>
+        }
+    }
+</div>
+
+@functions {
+    string GetActionBadgeClass(string? action)
+    {
+        var a = action?.ToLower() ?? "";
+        if (a.Contains("reimburse")) return "b-green";
+        if (a.Contains("payment")) return "b-info";
+        if (a.Contains("reject")) return "b-red";
+        if (a.Contains("approve")) return "b-blue";
+        if (a.Contains("move")) return "b-amber";
+        return "b-gray";
+    }
+
+    string GetActionIcon(string? action)
+    {
+        var a = action?.ToLower() ?? "";
+        if (a.Contains("reimburse")) return "bi-cash-coin";
+        if (a.Contains("payment")) return "bi-credit-card";
+        if (a.Contains("reject")) return "bi-x-circle";
+        if (a.Contains("approve")) return "bi-check-circle";
+        if (a.Contains("move")) return "bi-arrow-right-circle";
+        return "bi-dot";
+    }
+}
+
+@section Scripts {
+    <script>
+        // Debounced search
+        (function () {
+            const input = document.getElementById('searchInput');
+            let timer;
+            input?.addEventListener('input', () => {
+                clearTimeout(timer);
+                timer = setTimeout(() => document.getElementById('searchForm').submit(), 500);
+            });
+        })();
+
+        // Quick date presets (apply and submit)
+        (function () {
+            const fmt = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            document.querySelectorAll('.preset').forEach(btn => btn.addEventListener('click', () => {
+                const now = new Date();
+                let start = new Date(now.getFullYear(), now.getMonth(), 1);
+                switch (btn.dataset.range) {
+                    case 'today': start = new Date(now); break;
+                    case 'week':
+                        start = new Date(now); start.setDate(now.getDate() - ((now.getDay() + 6) % 7)); break;
+                    case 'year': start = new Date(now.getFullYear(), 0, 1); break;
+                }
+                document.getElementById('dateFrom').value = fmt(start);
+                document.getElementById('dateTo').value = fmt(now);
+                document.getElementById('searchForm').submit();
+            }));
+        })();
+    </script>
+}

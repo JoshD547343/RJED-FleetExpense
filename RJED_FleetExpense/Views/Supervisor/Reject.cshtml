@@ -1,0 +1,638 @@
+﻿@* Views/Supervisor/RejectedExpenses.cshtml *@
+@model RJED.ViewModels.Supervisor.RejectedExpensesPageViewModel
+@{
+    ViewData["Title"] = "Rejected Expenses";
+    Layout = "~/Views/Shared/_LayoutSupervisor.cshtml";
+}
+
+@section Styles {
+    <style>
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.4rem;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 4px solid transparent;
+            border-radius: 12px;
+            padding: 1.05rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            opacity: 0;
+            transform: translateY(10px);
+            animation: rise 0.38s ease forwards;
+        }
+
+            .stat-card:nth-child(1) {
+                border-left-color: var(--red);
+                animation-delay: 0s;
+            }
+
+            .stat-card:nth-child(2) {
+                border-left-color: var(--amber);
+                animation-delay: 0.06s;
+            }
+
+            .stat-card:nth-child(3) {
+                border-left-color: var(--blue);
+                animation-delay: 0.12s;
+            }
+
+        .stat-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .stat-label {
+            font-size: 0.68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .stat-sub {
+            font-size: 0.7rem;
+            color: var(--muted);
+        }
+
+        .stat-value {
+            margin-left: auto;
+            text-align: right;
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1.1;
+        }
+
+        .info-note {
+            font-size: .78rem;
+            color: var(--muted);
+            margin-bottom: 1rem;
+        }
+
+        .sc {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            margin-bottom: 1.4rem;
+        }
+
+        .sc-head {
+            padding: 0.85rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: .6rem;
+        }
+
+        .sc-title {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sc-body {
+            padding: 1rem 1.2rem;
+        }
+
+        .range-label {
+            font-size: .78rem;
+            color: var(--muted);
+        }
+
+        .fc-label {
+            font-size: .68rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .fc-input {
+            width: 100%;
+            padding: 7px 11px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: .84rem;
+            color: var(--text);
+            background: #fff;
+            outline: none;
+        }
+
+            .fc-input:focus {
+                border-color: var(--ink-2);
+            }
+
+        .input-wrap {
+            position: relative;
+        }
+
+            .input-wrap i {
+                position: absolute;
+                left: .7rem;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--muted);
+                font-size: .85rem;
+                pointer-events: none;
+            }
+
+            .input-wrap .fc-input {
+                padding-left: 2rem;
+            }
+
+        .btn-f {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: .82rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+            text-decoration: none;
+        }
+
+            .btn-f:hover {
+                opacity: .9;
+            }
+
+        .btn-main {
+            background: var(--ink);
+            color: #fff;
+        }
+
+            .btn-main:hover {
+                color: #fff;
+            }
+
+        .btn-clear {
+            background: var(--slate);
+            color: var(--muted);
+            border: 1.5px solid var(--border);
+        }
+
+            .btn-clear:hover {
+                color: var(--ink);
+                border-color: var(--ink-2);
+            }
+
+        .ex-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .ex-table thead th {
+                background: #f8faff;
+                color: var(--muted);
+                font-size: 0.66rem;
+                text-transform: uppercase;
+                letter-spacing: .6px;
+                padding: 0.7rem 1rem;
+                text-align: left;
+                white-space: nowrap;
+            }
+
+            .ex-table tbody td {
+                padding: 0.78rem 1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: .84rem;
+                vertical-align: middle;
+            }
+
+            .ex-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .ex-table tbody tr:hover {
+                background: #f8faff;
+            }
+
+        .emp-cell {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+        }
+
+        .user-avatar-sm {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: var(--ink-3);
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .emp-name {
+            font-weight: 600;
+            color: var(--ink);
+        }
+
+        .type-badge {
+            display: inline-block;
+            padding: 2px 9px;
+            background: #f1f5f9;
+            border-radius: 6px;
+            font-size: .76rem;
+            font-weight: 600;
+            color: var(--ink);
+        }
+
+        .amt {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-weight: 700;
+            color: var(--ink);
+            white-space: nowrap;
+        }
+
+        td.muted-sm {
+            color: var(--muted);
+            font-size: .8rem;
+            white-space: nowrap;
+        }
+
+        .st {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .st-rej {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .btn-view {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1.5px solid var(--border);
+            background: var(--slate);
+            color: var(--muted);
+            font-size: .76rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+            .btn-view:hover {
+                color: var(--ink);
+                border-color: var(--ink-2);
+            }
+
+        .empty-box {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: var(--muted);
+        }
+
+            .empty-box i {
+                font-size: 2rem;
+                opacity: .25;
+                display: block;
+                margin-bottom: .5rem;
+            }
+
+            .empty-box h6 {
+                font-weight: 700;
+                color: var(--ink);
+                margin-bottom: .3rem;
+            }
+
+        .pag-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: .5rem;
+            padding: .75rem 1.2rem;
+            border-top: 1px solid var(--border);
+            background: #f8faff;
+        }
+
+        .pagination {
+            display: flex;
+            gap: 4px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .page-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            font-size: .78rem;
+            font-weight: 600;
+            border: 1.5px solid var(--border);
+            background: #fff;
+            color: var(--ink);
+            text-decoration: none;
+        }
+
+            .page-link:hover {
+                border-color: var(--ink-2);
+                color: var(--ink);
+            }
+
+        .page-item.active .page-link {
+            background: var(--ink);
+            border-color: var(--ink);
+            color: #fff;
+        }
+
+        .pm-modal {
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+            .pm-modal .modal-header {
+                background: var(--ink);
+                border-bottom: none;
+                padding: 1rem 1.3rem;
+            }
+
+            .pm-modal .modal-title {
+                color: #fff;
+                font-size: .95rem;
+                font-weight: 700;
+                display: flex;
+                align-items: center;
+                gap: .5rem;
+            }
+
+            .pm-modal .modal-body {
+                padding: 1.3rem;
+            }
+
+            .pm-modal .modal-footer {
+                border-top: 1px solid var(--border);
+                padding: .85rem 1.3rem;
+            }
+
+        @@keyframes rise {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@media (max-width: 992px) {
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+}
+
+<div class="info-note">
+    <i class="bi bi-info-circle me-1"></i>Employees can resubmit corrected expenses.
+</div>
+
+<!-- Stat Cards -->
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fef2f2;color:var(--red)"><i class="bi bi-slash-circle"></i></div>
+        <div>
+            <div class="stat-label">Total Rejected</div>
+            <div class="stat-sub">Declined requests</div>
+        </div>
+        <div class="stat-value">@Model.TotalCount</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fff7ed;color:var(--amber)"><i class="bi bi-funnel"></i></div>
+        <div>
+            <div class="stat-label">Filtered Results</div>
+            <div class="stat-sub">Matching records</div>
+        </div>
+        <div class="stat-value">@Model.Expenses.Count</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--blue-bg);color:var(--blue)"><i class="bi bi-tags"></i></div>
+        <div>
+            <div class="stat-label">Rejection Categories</div>
+            <div class="stat-sub">Distinct reasons</div>
+        </div>
+        <div class="stat-value">@Model.RejectionReasons.Count</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="sc">
+    <div class="sc-body">
+        <form method="get" asp-action="RejectedExpenses" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="fc-label">Search</label>
+                <div class="input-wrap">
+                    <i class="bi bi-search"></i>
+                    <input type="text" name="search" value="@Model.SearchTerm" class="fc-input" placeholder="Employee or expense type…" />
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="fc-label">Rejection Category</label>
+                <select name="reason" class="fc-input">
+                    <option value="">All Categories</option>
+                    @foreach (var r in Model.RejectionReasons)
+                    {
+                        <option value="@r" selected="@(Model.ReasonFilter == r)">@r</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="fc-label">Date From</label>
+                <input type="date" name="dateFrom" class="fc-input" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-2">
+                <label class="fc-label">Date To</label>
+                <input type="date" name="dateTo" class="fc-input" value="@Model.DateTo?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn-f btn-main flex-grow-1"><i class="bi bi-funnel"></i> Filter</button>
+                <a asp-action="RejectedExpenses" class="btn-f btn-clear"><i class="bi bi-x-lg"></i></a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Records -->
+<div class="sc">
+    <div class="sc-head">
+        <h6 class="sc-title"><i class="bi bi-x-circle"></i> Rejected Records</h6>
+        <span class="range-label">@Model.TotalCount records</span>
+    </div>
+
+    @if (!Model.Expenses.Any())
+    {
+        <div class="empty-box">
+            <i class="bi bi-emoji-smile"></i>
+            <h6>No Rejected Expenses</h6>
+            <p class="mb-0">No rejected expenses match your current filters.</p>
+        </div>
+    }
+    else
+    {
+        <div style="overflow-x:auto">
+            <table class="ex-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Employee</th>
+                        <th>Department</th>
+                        <th>Expense Type</th>
+                        <th>Amount</th>
+                        <th>Submitted</th>
+                        <th>Rejected On</th>
+                        <th>Category</th>
+                        <th>Reason</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var exp in Model.Expenses)
+                    {
+                        <tr>
+                            <td class="muted-sm">@exp.Id</td>
+                            <td>
+                                <div class="emp-cell">
+                                    <div class="user-avatar-sm">@exp.EmployeeName[0].ToString().ToUpper()</div>
+                                    <span class="emp-name">@exp.EmployeeName</span>
+                                </div>
+                            </td>
+                            <td class="muted-sm">@exp.Department</td>
+                            <td><span class="type-badge">@exp.ExpenseType</span></td>
+                            <td class="amt">&#8369;@exp.Amount.ToString("N2")</td>
+                            <td class="muted-sm">@exp.SubmittedDate.ToString("MMM d, yyyy")</td>
+                            <td class="muted-sm">@(exp.RejectedDate.HasValue? exp.RejectedDate.Value.ToString("MMM d, yyyy") : "—")</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(exp.RejectionReason))
+                                {
+                                    <span class="st st-rej">@exp.RejectionReason</span>
+                                }
+                                else
+                                {
+                                    <span class="muted-sm">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(exp.SupervisorRemarks))
+                                {
+                                    <button type="button" class="btn-view view-reason-btn"
+                                            data-remarks="@exp.SupervisorRemarks"
+                                            data-employee="@exp.EmployeeName"
+                                            data-bs-toggle="modal" data-bs-target="#reasonModal">
+                                        <i class="bi bi-eye"></i> View
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="muted-sm">—</span>
+                                }
+                            </td>
+                            <td><span class="st st-rej"><i class="bi bi-x-circle-fill"></i> Rejected</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (Model.TotalPages > 1)
+        {
+            <div class="pag-wrap">
+                <small class="muted-sm">
+                    Showing @((Model.Page - 1) * Model.PageSize + 1)&ndash;@(Math.Min(Model.Page * Model.PageSize, Model.TotalCount)) of @Model.TotalCount
+                </small>
+                <ul class="pagination">
+                    @for (int p = 1; p <= Model.TotalPages; p++)
+                    {
+                        <li class="page-item @(p == Model.Page ? "active" : "")">
+                            <a class="page-link" asp-action="RejectedExpenses"
+                               asp-route-page="@p" asp-route-search="@Model.SearchTerm"
+                               asp-route-reason="@Model.ReasonFilter"
+                               asp-route-dateFrom="@Model.DateFrom?.ToString("yyyy-MM-dd")"
+                               asp-route-dateTo="@Model.DateTo?.ToString("yyyy-MM-dd")">@p</a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    }
+</div>
+
+<!-- Remarks modal -->
+<div class="modal fade" id="reasonModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content pm-modal">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-chat-square-text"></i> Rejection Remarks</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:.845rem;color:var(--muted);margin-bottom:.75rem">
+                    Submitted by: <strong id="reason-employee" style="color:var(--ink)"></strong>
+                </p>
+                <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:.85rem 1rem;font-size:.845rem;color:#7f1d1d;line-height:1.6"
+                     id="reason-text"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-f btn-clear" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.view-reason-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                document.getElementById('reason-employee').textContent = this.dataset.employee;
+                document.getElementById('reason-text').textContent     = this.dataset.remarks;
+            });
+        });
+    </script>
+}

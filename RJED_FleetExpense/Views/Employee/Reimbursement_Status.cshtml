@@ -1,0 +1,909 @@
+﻿@model IEnumerable<RJED_FleetExpense.Models.Expense>
+
+@{
+    ViewData["Title"] = "Reimbursement Status";
+    Layout = "~/Views/Shared/_LayoutEmployee.cshtml";
+
+    var payments = ViewBag.Payments as Dictionary<int, RJED_FleetExpense.Models.Reimbursement>
+                   ?? new Dictionary<int, RJED_FleetExpense.Models.Reimbursement>();
+}
+
+@section Styles {
+    <style>
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.4rem;
+        }
+
+        .stat-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-left: 4px solid transparent;
+            border-radius: 12px;
+            padding: 1.05rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            opacity: 0;
+            transform: translateY(10px);
+            animation: rise 0.38s ease forwards;
+        }
+
+            .stat-card:nth-child(1) {
+                border-left-color: #10b981;
+                animation-delay: 0s;
+            }
+
+            .stat-card:nth-child(2) {
+                border-left-color: #f59e0b;
+                animation-delay: 0.06s;
+            }
+
+            .stat-card:nth-child(3) {
+                border-left-color: #ef4444;
+                animation-delay: 0.12s;
+            }
+
+            .stat-card:nth-child(4) {
+                border-left-color: #3b82f6;
+                animation-delay: 0.18s;
+            }
+
+        .stat-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .stat-label {
+            font-size: 0.68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .stat-sub {
+            font-size: 0.7rem;
+            color: var(--muted);
+        }
+
+        .stat-value {
+            margin-left: auto;
+            text-align: right;
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1.1;
+        }
+
+        .sc {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            margin-bottom: 1.4rem;
+        }
+
+        .sc-head {
+            padding: 0.85rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: .6rem;
+        }
+
+        .sc-title {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sc-body {
+            padding: 1.1rem 1.2rem;
+        }
+
+        .sc-foot {
+            padding: .75rem 1.2rem;
+            border-top: 1px solid var(--border);
+            background: #f8faff;
+            font-size: .78rem;
+            color: var(--muted);
+        }
+
+        /* Pipeline tracker */
+        .tracker-steps {
+            display: flex;
+            align-items: center;
+        }
+
+        .tracker-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            position: relative;
+        }
+
+            .tracker-step:not(:last-child)::after {
+                content: '';
+                position: absolute;
+                top: 18px;
+                left: 50%;
+                width: 100%;
+                height: 3px;
+                background: var(--border);
+                z-index: 0;
+            }
+
+            .tracker-step.done:not(:last-child)::after {
+                background: #10b981;
+            }
+
+        .tracker-dot {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--border);
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            z-index: 1;
+            position: relative;
+        }
+
+        .tracker-step.done .tracker-dot {
+            background: #10b981;
+            color: #fff;
+        }
+
+        .tracker-step.active .tracker-dot {
+            background: #3b82f6;
+            color: #fff;
+            box-shadow: 0 0 0 4px rgba(59,130,246,0.15);
+        }
+
+        .tracker-label {
+            margin-top: .5rem;
+            font-size: .68rem;
+            font-weight: 600;
+            color: #94a3b8;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .tracker-step.done .tracker-label,
+        .tracker-step.active .tracker-label {
+            color: var(--text);
+        }
+
+        /* Filters */
+        .fp-label {
+            font-size: .68rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .fp-input {
+            width: 100%;
+            padding: 7px 11px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: .84rem;
+            color: var(--text);
+            background: #fff;
+            outline: none;
+        }
+
+            .fp-input:focus {
+                border-color: var(--ink);
+            }
+
+        .btn-main {
+            background: var(--ink);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: .82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+        }
+
+            .btn-main:hover {
+                opacity: .9;
+            }
+
+        .btn-ghost {
+            background: var(--slate);
+            color: var(--muted);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 7px 14px;
+            font-size: .82rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+            .btn-ghost:hover {
+                color: var(--ink);
+                border-color: var(--ink);
+            }
+
+        /* Table */
+        .ex-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .ex-table thead th {
+                background: #f8faff;
+                color: var(--muted);
+                font-size: 0.66rem;
+                text-transform: uppercase;
+                letter-spacing: .6px;
+                padding: 0.7rem 1rem;
+                text-align: left;
+                white-space: nowrap;
+            }
+
+            .ex-table tbody td {
+                padding: 0.78rem 1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: .84rem;
+                vertical-align: middle;
+            }
+
+            .ex-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .ex-table tbody tr:hover {
+                background: #f8faff;
+            }
+
+        .amt {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-weight: 700;
+            color: var(--ink);
+            white-space: nowrap;
+        }
+
+        .type-chip {
+            display: inline-block;
+            background: #f1f5f9;
+            color: var(--ink);
+            padding: 2px 9px;
+            border-radius: 6px;
+            font-size: .76rem;
+            font-weight: 600;
+        }
+
+        .st {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .st-ok {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .st-acc {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+
+        .st-pend {
+            background: #fffbeb;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        .st-rej {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .reimburse-bar-wrap {
+            min-width: 110px;
+        }
+
+        .reimburse-bar {
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border);
+            overflow: hidden;
+        }
+
+        .reimburse-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+
+        .fill-approved {
+            background: #3b82f6;
+            width: 70%;
+        }
+
+        .fill-reimbursed {
+            background: #10b981;
+            width: 100%;
+        }
+
+        .fill-pending {
+            background: #f59e0b;
+            width: 35%;
+        }
+
+        .fill-rejected {
+            background: #ef4444;
+            width: 100%;
+        }
+
+        .reimburse-bar-label {
+            font-size: .7rem;
+            color: var(--muted);
+            margin-top: 3px;
+        }
+
+        .btn-view {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1.5px solid var(--border);
+            background: var(--slate);
+            color: var(--muted);
+            font-size: .76rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+            .btn-view:hover {
+                color: var(--ink);
+                border-color: var(--ink);
+            }
+
+        .empty-box {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--muted);
+        }
+
+            .empty-box i {
+                font-size: 2rem;
+                opacity: .25;
+                display: block;
+                margin-bottom: .5rem;
+            }
+
+        /* Modal */
+        .pm-modal {
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+            .pm-modal .modal-header {
+                background: var(--ink);
+                border-bottom: none;
+                padding: 1rem 1.3rem;
+            }
+
+            .pm-modal .modal-title {
+                color: #fff;
+                font-size: .95rem;
+                font-weight: 700;
+            }
+
+            .pm-modal .modal-footer {
+                border-top: 1px solid var(--border);
+                padding: .85rem 1.3rem;
+            }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: .55rem .5rem;
+        }
+
+        .detail-dt {
+            font-size: .68rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            padding-top: 2px;
+        }
+
+        .detail-dd {
+            font-size: .85rem;
+            color: var(--text);
+            margin: 0;
+        }
+
+        .timeline-modal {
+            position: relative;
+            padding-left: 1.75rem;
+        }
+
+            .timeline-modal::before {
+                content: '';
+                position: absolute;
+                left: 7px;
+                top: 6px;
+                bottom: 6px;
+                width: 2px;
+                background: var(--border);
+            }
+
+        .tl-item {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+            .tl-item:last-child {
+                margin-bottom: 0;
+            }
+
+        .tl-dot {
+            position: absolute;
+            left: -1.75rem;
+            top: 4px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--border);
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 2px var(--border);
+        }
+
+        .tl-item.done .tl-dot {
+            background: #10b981;
+            box-shadow: 0 0 0 2px #a7f3d0;
+        }
+
+        .tl-item.active .tl-dot {
+            background: #3b82f6;
+            box-shadow: 0 0 0 2px #bfdbfe;
+        }
+
+        .tl-item.reject .tl-dot {
+            background: #ef4444;
+            box-shadow: 0 0 0 2px #fecaca;
+        }
+
+        .tl-title {
+            font-size: .85rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .tl-sub {
+            font-size: .76rem;
+            color: var(--muted);
+        }
+
+        @@keyframes rise {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@media (max-width: 1200px) {
+            .stat-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @@media (max-width: 575px) {
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tracker-label {
+                font-size: .58rem;
+            }
+        }
+    </style>
+}
+
+<!-- Stat Cards -->
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#ecfdf5;color:#10b981"><i class="bi bi-check-circle"></i></div>
+        <div>
+            <div class="stat-label">Total Approved</div>
+            <div class="stat-sub">Approved amount</div>
+        </div>
+        <div class="stat-value">&#8369;@String.Format("{0:N2}", ViewBag.TotalApproved ?? 0m)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fffbeb;color:#f59e0b"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+            <div class="stat-label">Pending</div>
+            <div class="stat-sub">In review</div>
+        </div>
+        <div class="stat-value">&#8369;@String.Format("{0:N2}", ViewBag.TotalPending ?? 0m)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fef2f2;color:#ef4444"><i class="bi bi-x-circle"></i></div>
+        <div>
+            <div class="stat-label">Rejected</div>
+            <div class="stat-sub">Not approved</div>
+        </div>
+        <div class="stat-value">&#8369;@String.Format("{0:N2}", ViewBag.TotalRejected ?? 0m)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#eff6ff;color:#3b82f6"><i class="bi bi-receipt"></i></div>
+        <div>
+            <div class="stat-label">Total Submitted</div>
+            <div class="stat-sub">All claims</div>
+        </div>
+        <div class="stat-value">@(ViewBag.TotalSubmitted ?? 0)</div>
+    </div>
+</div>
+
+<!-- Pipeline -->
+<div class="sc">
+    <div class="sc-head">
+        <h6 class="sc-title"><i class="bi bi-diagram-3"></i> Reimbursement Pipeline</h6>
+        <small class="text-muted">How a claim moves to payout</small>
+    </div>
+    <div class="sc-body">
+        <div class="tracker-steps">
+            <div class="tracker-step done">
+                <div class="tracker-dot"><i class="bi bi-send-check"></i></div>
+                <div class="tracker-label">Submitted</div>
+            </div>
+            <div class="tracker-step done">
+                <div class="tracker-dot"><i class="bi bi-search"></i></div>
+                <div class="tracker-label">Under Review</div>
+            </div>
+            <div class="tracker-step active">
+                <div class="tracker-dot"><i class="bi bi-person-check"></i></div>
+                <div class="tracker-label">Approval</div>
+            </div>
+            <div class="tracker-step">
+                <div class="tracker-dot"><i class="bi bi-bank"></i></div>
+                <div class="tracker-label">Processing</div>
+            </div>
+            <div class="tracker-step">
+                <div class="tracker-dot"><i class="bi bi-cash-coin"></i></div>
+                <div class="tracker-label">Reimbursed</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="sc">
+    <div class="sc-body">
+        <form method="get" asp-controller="Employee" asp-action="Reimbursement_Status">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="fp-label">Search</label>
+                    <input type="text" name="search" class="fp-input" placeholder="Search description or type..." value="@ViewBag.Search" />
+                </div>
+                <div class="col-md-2">
+                    <label class="fp-label">Status</label>
+                    <select name="status" class="fp-input">
+                        <option value="">All Status</option>
+                        <option value="Approved" selected="@(ViewBag.Status == "Approved" ? "selected" : null)">Approved</option>
+                        <option value="Reimbursed" selected="@(ViewBag.Status == "Reimbursed" ? "selected" : null)">Reimbursed</option>
+                        <option value="Pending" selected="@(ViewBag.Status == "Pending" ? "selected" : null)">Pending</option>
+                        <option value="Rejected" selected="@(ViewBag.Status == "Rejected" ? "selected" : null)">Rejected</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="fp-label">Category</label>
+                    <select name="category" class="fp-input">
+                        <option value="">All Categories</option>
+                        @foreach (var cat in new[] { "Fuel", "Toll", "Maintenance", "Meals", "Travel", "Supplies", "Other" })
+                        {
+                            <option value="@cat" selected="@(ViewBag.Category == cat ? "selected" : null)">@cat</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="fp-label">Date From</label>
+                    <input type="date" name="dateFrom" class="fp-input" value="@ViewBag.DateFrom" />
+                </div>
+                <div class="col-md-2">
+                    <label class="fp-label">Date To</label>
+                    <input type="date" name="dateTo" class="fp-input" value="@ViewBag.DateTo" />
+                </div>
+                <div class="col-md-1 d-flex gap-2">
+                    <button type="submit" class="btn-main" title="Search"><i class="bi bi-search"></i></button>
+                    <a href="@Url.Action("Reimbursement_Status", "Employee")" class="btn-ghost" title="Reset"><i class="bi bi-arrow-counterclockwise"></i></a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="sc">
+    <div class="sc-head">
+        <h6 class="sc-title"><i class="bi bi-table"></i> Reimbursement Records</h6>
+        <small class="text-muted">Track per-expense reimbursement progress</small>
+    </div>
+
+    <div style="overflow-x:auto">
+        <table class="ex-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th>Vehicle</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Progress</th>
+                    <th>Submitted</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    int counter = 1;
+                    foreach (var expense in Model)
+                    {
+                        string group = expense.Status == "Rejected" ? "Rejected"
+                        : expense.Status == "Reimbursed" ? "Reimbursed"
+                        : (expense.Status == "Approved" || expense.Status == "DepartmentApproved" || expense.Status == "ForAccounting") ? "Approved"
+                        : "Pending";
+
+                        string fillClass = group switch
+                        {
+                            "Approved" => "fill-approved",
+                            "Reimbursed" => "fill-reimbursed",
+                            "Rejected" => "fill-rejected",
+                            _ => "fill-pending"
+                        };
+
+                        string progressLabel = group switch
+                        {
+                            "Approved" => "Approved — Awaiting Payout",
+                            "Reimbursed" => "Paid",
+                            "Rejected" => "Rejected",
+                            _ => "In Review"
+                        };
+
+                        payments.TryGetValue(expense.Id, out var pay);
+
+                        <tr>
+                            <td style="color:var(--muted);font-size:.78rem">@counter.ToString("D3")</td>
+                            <td style="white-space:nowrap;color:var(--muted);font-size:.8rem">@expense.ExpenseDate.ToString("MMM dd, yyyy")</td>
+                            <td><span class="type-chip">@expense.ExpenseType</span></td>
+                            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@(expense.Description ?? "—")</td>
+                            <td style="font-size:.8rem;color:var(--muted)">@(string.IsNullOrEmpty(expense.PlateNumber) ? "—" : expense.PlateNumber)</td>
+                            <td class="amt">&#8369;@expense.Amount.ToString("N2")</td>
+                            <td>
+                                @if (group == "Reimbursed")
+                                {
+                                    <span class="st st-ok"><i class="bi bi-check-circle-fill"></i> Reimbursed</span>
+                                }
+                                else if (group == "Rejected")
+                                {
+                                    <span class="st st-rej"><i class="bi bi-x-circle-fill"></i> Rejected</span>
+                                }
+                                else if (group == "Approved")
+                                {
+                                    <span class="st st-acc"><i class="bi bi-send-check-fill"></i> Approved</span>
+                                }
+                                else
+                                {
+                                    <span class="st st-pend"><i class="bi bi-hourglass-split"></i> Pending</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="reimburse-bar-wrap">
+                                    <div class="reimburse-bar"><div class="reimburse-bar-fill @fillClass"></div></div>
+                                    <div class="reimburse-bar-label">@progressLabel</div>
+                                </div>
+                            </td>
+                            <td style="white-space:nowrap;color:var(--muted);font-size:.8rem">@expense.DateSubmitted.ToString("MMM dd, yyyy")</td>
+                            <td>
+                                <button class="btn-view"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#viewDetailModal"
+                                        data-type="@expense.ExpenseType"
+                                        data-amount="@expense.Amount.ToString("N2")"
+                                        data-date="@expense.ExpenseDate.ToString("MMM dd, yyyy")"
+                                        data-plate="@(expense.PlateNumber ?? "—")"
+                                        data-desc="@(expense.Description ?? "—")"
+                                        data-status="@group"
+                                        data-ref="@(pay?.TransactionRef ?? "")"
+                                        data-paid="@(pay?.PaymentDate.ToString("MMM dd, yyyy") ?? "")"
+                                        data-submitted="@expense.DateSubmitted.ToString("MMM dd, yyyy hh:mm tt")">
+                                    <i class="bi bi-eye"></i> View
+                                </button>
+                            </td>
+                        </tr>
+                        counter++;
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="10">
+                            <div class="empty-box">
+                                <i class="bi bi-inbox"></i>
+                                <p class="mb-0">No reimbursement records found. Try adjusting your filters or submit a new expense.</p>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="sc-foot">Showing @(Model?.Count() ?? 0) record(s)</div>
+</div>
+
+<!-- View Detail Modal -->
+<div class="modal fade" id="viewDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content pm-modal">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-arrow-repeat me-2"></i> Reimbursement Detail</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="timeline-modal mb-4" id="modal-timeline"></div>
+                <hr style="border-color:var(--border)" class="my-3">
+
+                <div class="detail-grid">
+                    <div class="detail-dt">Type</div>
+                    <div class="detail-dd" id="d-type"></div>
+
+                    <div class="detail-dt">Amount</div>
+                    <div class="detail-dd fw-bold" id="d-amount"></div>
+
+                    <div class="detail-dt">Expense Date</div>
+                    <div class="detail-dd" id="d-date"></div>
+
+                    <div class="detail-dt">Vehicle</div>
+                    <div class="detail-dd" id="d-plate"></div>
+
+                    <div class="detail-dt">Description</div>
+                    <div class="detail-dd" id="d-desc"></div>
+
+                    <div class="detail-dt">Status</div>
+                    <div class="detail-dd" id="d-status"></div>
+
+                    <div class="detail-dt">Submitted</div>
+                    <div class="detail-dd" id="d-submitted"></div>
+
+                    <div class="detail-dt d-ref-row">Reference No.</div>
+                    <div class="detail-dd d-ref-row" id="d-ref"></div>
+
+                    <div class="detail-dt d-ref-row">Paid On</div>
+                    <div class="detail-dd d-ref-row" id="d-paid"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-ghost" style="width:auto" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('viewDetailModal')?.addEventListener('show.bs.modal', function (event) {
+            const btn = event.relatedTarget;
+            const status = btn.dataset.status;
+            const refNo = btn.dataset.ref || '';
+            const paidOn = btn.dataset.paid || '';
+
+            document.getElementById('d-type').textContent      = btn.dataset.type;
+            document.getElementById('d-amount').textContent    = '₱ ' + btn.dataset.amount;
+            document.getElementById('d-date').textContent      = btn.dataset.date;
+            document.getElementById('d-plate').textContent     = btn.dataset.plate;
+            document.getElementById('d-desc').textContent      = btn.dataset.desc;
+            document.getElementById('d-submitted').textContent = btn.dataset.submitted;
+            document.getElementById('d-ref').textContent       = refNo || '—';
+            document.getElementById('d-paid').textContent      = paidOn || '—';
+
+            // Show the payment rows only once the expense has been paid
+            document.querySelectorAll('.d-ref-row').forEach(el => {
+                el.style.display = status === 'Reimbursed' ? '' : 'none';
+            });
+
+            const statusEl = document.getElementById('d-status');
+            const cls = status === 'Approved'   ? 'st-acc'
+                      : status === 'Reimbursed' ? 'st-ok'
+                      : status === 'Rejected'   ? 'st-rej'
+                      : 'st-pend';
+            statusEl.innerHTML = `<span class="st ${cls}">${status}</span>`;
+
+            const approvedOrPaid = status === 'Approved' || status === 'Reimbursed';
+
+            const steps = [
+                { label: 'Submitted',    sub: btn.dataset.submitted, state: 'done' },
+                { label: 'Under Review', sub: 'Supervisor and department review', state: status === 'Rejected' ? 'reject' : 'done' },
+                {
+                    label: 'Approval',
+                    sub:   approvedOrPaid ? 'Approved'
+                         : status === 'Rejected' ? 'Rejected'
+                         : 'Awaiting approval',
+                    state: approvedOrPaid ? 'done'
+                         : status === 'Rejected' ? 'reject'
+                         : 'active'
+                },
+                {
+                    label: 'Processing',
+                    sub:   'Accounting payment',
+                    state: status === 'Approved' ? 'active'
+                         : status === 'Reimbursed' ? 'done'
+                         : ''
+                },
+                {
+                    label: 'Reimbursed',
+                    sub:   status === 'Reimbursed'
+                             ? `Paid ${paidOn}${refNo ? ' · Ref: ' + refNo : ''}`
+                             : 'Payment released',
+                    state: status === 'Reimbursed' ? 'done' : ''
+                }
+            ];
+
+            document.getElementById('modal-timeline').innerHTML = steps.map(s => `
+                <div class="tl-item ${s.state}">
+                    <div class="tl-dot"></div>
+                    <div class="tl-title">${s.label}</div>
+                    <div class="tl-sub">${s.sub}</div>
+                </div>
+            `).join('');
+        });
+    </script>
+}

@@ -1,0 +1,810 @@
+﻿@model IEnumerable<RJED_FleetExpense.Models.Expense>
+@{
+    ViewData["Title"] = "Supervisor Dashboard";
+    Layout = "~/Views/Shared/_LayoutSupervisor.cshtml";
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+}
+
+@section Styles {
+    <style>
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.4rem;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 4px solid transparent;
+            border-radius: 12px;
+            padding: 1.05rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            opacity: 0;
+            transform: translateY(10px);
+            animation: rise 0.38s ease forwards;
+        }
+
+            .stat-card:nth-child(1) {
+                border-left-color: var(--amber);
+                animation-delay: 0s;
+            }
+
+            .stat-card:nth-child(2) {
+                border-left-color: var(--green);
+                animation-delay: 0.06s;
+            }
+
+            .stat-card:nth-child(3) {
+                border-left-color: var(--blue);
+                animation-delay: 0.12s;
+            }
+
+            .stat-card:nth-child(4) {
+                border-left-color: var(--red);
+                animation-delay: 0.18s;
+            }
+
+        .stat-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .stat-label {
+            font-size: 0.68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .stat-sub {
+            font-size: 0.7rem;
+            color: var(--muted);
+        }
+
+        .stat-value {
+            margin-left: auto;
+            text-align: right;
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1.1;
+        }
+
+        .quick-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.85rem;
+            margin-bottom: 1.4rem;
+        }
+
+        .quick-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem 1.15rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            text-decoration: none;
+            color: var(--text);
+            transition: border-color 0.16s, box-shadow 0.16s, transform 0.16s;
+            opacity: 0;
+            transform: translateY(10px);
+            animation: rise 0.38s ease forwards;
+        }
+
+            .quick-card:nth-child(1) {
+                animation-delay: 0.2s;
+            }
+
+            .quick-card:nth-child(2) {
+                animation-delay: 0.25s;
+            }
+
+            .quick-card:nth-child(3) {
+                animation-delay: 0.3s;
+            }
+
+            .quick-card:hover {
+                border-color: var(--ink-2);
+                box-shadow: 0 4px 14px rgba(15,22,35,0.07);
+                transform: translateY(-2px);
+                color: var(--ink);
+            }
+
+        .quick-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .quick-title {
+            font-weight: 700;
+            font-size: 0.875rem;
+            color: var(--ink);
+        }
+
+        .quick-sub {
+            font-size: 0.73rem;
+            color: var(--muted);
+            margin-top: 1px;
+        }
+
+        .quick-arrow {
+            margin-left: auto;
+            color: var(--muted);
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .sc {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+        }
+
+        .sc-head {
+            padding: 0.85rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .5rem;
+            flex-wrap: wrap;
+        }
+
+        .sc-title {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--ink);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 0;
+        }
+
+        .sc-viewall {
+            font-size: .78rem;
+            font-weight: 600;
+            color: var(--green);
+            text-decoration: none;
+        }
+
+        .sc-body {
+            padding: 1.1rem 1.2rem;
+        }
+
+        .ex-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .ex-table thead th {
+                background: #f8faff;
+                color: var(--muted);
+                font-size: 0.66rem;
+                text-transform: uppercase;
+                letter-spacing: .6px;
+                padding: 0.7rem 1rem;
+                text-align: left;
+                white-space: nowrap;
+            }
+
+            .ex-table tbody td {
+                padding: 0.78rem 1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: .84rem;
+                vertical-align: middle;
+            }
+
+            .ex-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .ex-table tbody tr:hover {
+                background: #f8faff;
+            }
+
+        .person-cell {
+            display: flex;
+            align-items: center;
+            gap: .55rem;
+        }
+
+        .mini-av {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: var(--ink-3);
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .person-name {
+            font-weight: 600;
+            color: var(--ink);
+        }
+
+        .amt {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-weight: 700;
+            color: var(--ink);
+            white-space: nowrap;
+        }
+
+        .st {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .st-pend {
+            background: #fffbeb;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        .st-ok {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .st-rej {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .act-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            justify-content: center;
+        }
+
+        .act {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 9px;
+            border-radius: 6px;
+            border: 1.5px solid transparent;
+            font-size: .76rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            white-space: nowrap;
+            background: none;
+        }
+
+        .act-approve {
+            background: #ecfdf5;
+            color: var(--green);
+            border-color: #a7f3d0;
+        }
+
+            .act-approve:hover {
+                background: var(--green);
+                color: #fff;
+                border-color: var(--green);
+            }
+
+        .act-reject {
+            background: #fef2f2;
+            color: var(--red);
+            border-color: #fecaca;
+        }
+
+            .act-reject:hover {
+                background: var(--red);
+                color: #fff;
+                border-color: var(--red);
+            }
+
+        .act-view {
+            background: var(--slate);
+            color: var(--muted);
+            border-color: var(--border);
+        }
+
+            .act-view:hover {
+                color: var(--ink);
+                border-color: var(--ink-2);
+            }
+
+        .empty-box {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: var(--muted);
+        }
+
+            .empty-box i {
+                font-size: 2rem;
+                opacity: .25;
+                display: block;
+                margin-bottom: .5rem;
+            }
+
+        .bar-wrap {
+            margin-bottom: 1rem;
+        }
+
+            .bar-wrap:last-child {
+                margin-bottom: 0;
+            }
+
+        .bar-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text);
+        }
+
+        .bar-track {
+            height: 7px;
+            background: var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.8s ease;
+        }
+
+        .team-row {
+            display: flex;
+            align-items: center;
+            gap: .7rem;
+            padding: .65rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+            .team-row:last-child {
+                border-bottom: none;
+            }
+
+            .team-row:hover {
+                background: #f8faff;
+            }
+
+        .team-name {
+            font-weight: 600;
+            font-size: .845rem;
+            color: var(--ink);
+        }
+
+        .team-sub {
+            font-size: .7rem;
+            color: var(--muted);
+        }
+
+        .team-amt {
+            margin-left: auto;
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: .86rem;
+            color: var(--ink);
+        }
+
+        .urgent {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #fffbeb;
+            border: 1.5px solid #fcd34d;
+            border-radius: 10px;
+            padding: .7rem 1.05rem;
+            margin-bottom: 1.2rem;
+            gap: .75rem;
+            flex-wrap: wrap;
+        }
+
+        .urgent-left {
+            display: flex;
+            align-items: center;
+            gap: .55rem;
+        }
+
+        .urgent-text {
+            font-size: .855rem;
+            color: #78350f;
+            font-weight: 500;
+        }
+
+            .urgent-text strong {
+                font-weight: 700;
+            }
+
+        .urgent-btn {
+            background: var(--amber);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: .4rem .95rem;
+            font-size: .8rem;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+
+            .urgent-btn:hover {
+                opacity: .88;
+                color: #fff;
+            }
+
+        @@keyframes rise {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@media (max-width: 1200px) {
+            .stat-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @@media (max-width: 768px) {
+            .quick-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @@media (max-width: 480px) {
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+}
+
+@if ((int)(ViewBag.PendingCount ?? 0) > 0)
+{
+    <div class="urgent">
+        <div class="urgent-left">
+            <i class="bi bi-exclamation-triangle-fill" style="color:var(--amber);font-size:1.1rem"></i>
+            <span class="urgent-text">
+                You have <strong>@ViewBag.PendingCount expense(s)</strong> waiting for your review.
+            </span>
+        </div>
+        <a asp-controller="Supervisor" asp-action="PendingExpenses" class="urgent-btn">
+            <i class="bi bi-arrow-right-circle"></i> Review Now
+        </a>
+    </div>
+}
+
+<!-- Stat Cards -->
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fff7ed;color:var(--amber)">
+            <i class="bi bi-hourglass-split"></i>
+        </div>
+        <div>
+            <div class="stat-label">Pending Review</div>
+            <div class="stat-sub">@((int)(ViewBag.PendingCount ?? 0) > 0 ? "Needs your action" : "All clear ✓")</div>
+        </div>
+        <div class="stat-value">@(ViewBag.PendingCount ?? 0)</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#ecfdf5;color:var(--green)">
+            <i class="bi bi-check2-circle"></i>
+        </div>
+        <div>
+            <div class="stat-label">Total Approved</div>
+            <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-value">&#8369;@String.Format("{0:N0}", ViewBag.TotalApproved ?? 0)</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--blue-bg);color:var(--blue)">
+            <i class="bi bi-cash-stack"></i>
+        </div>
+        <div>
+            <div class="stat-label">This Month</div>
+            <div class="stat-sub">@DateTime.Now.ToString("MMMM yyyy")</div>
+        </div>
+        <div class="stat-value">&#8369;@String.Format("{0:N0}", ViewBag.TotalExpensesThisMonth ?? 0)</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fef2f2;color:var(--red)">
+            <i class="bi bi-x-circle"></i>
+        </div>
+        <div>
+            <div class="stat-label">Total Rejected</div>
+            <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-value">@(ViewBag.RejectedCount ?? 0)</div>
+    </div>
+</div>
+
+<!-- Quick links -->
+<div class="quick-grid">
+    <a asp-controller="Supervisor" asp-action="PendingExpenses" class="quick-card">
+        <div class="quick-icon" style="background:#fff7ed;color:var(--amber)">
+            <i class="bi bi-hourglass-split"></i>
+        </div>
+        <div>
+            <div class="quick-title">Pending Review</div>
+            <div class="quick-sub">@(ViewBag.PendingCount ?? 0) expense(s) to review</div>
+        </div>
+        <i class="bi bi-chevron-right quick-arrow"></i>
+    </a>
+
+    <a asp-controller="Supervisor" asp-action="ApprovedExpenses" class="quick-card">
+        <div class="quick-icon" style="background:#ecfdf5;color:var(--green)">
+            <i class="bi bi-check2-circle"></i>
+        </div>
+        <div>
+            <div class="quick-title">Approved Expenses</div>
+            <div class="quick-sub">View all approved claims</div>
+        </div>
+        <i class="bi bi-chevron-right quick-arrow"></i>
+    </a>
+
+    <a asp-controller="Supervisor" asp-action="MyTeam" class="quick-card">
+        <div class="quick-icon" style="background:var(--blue-bg);color:var(--blue)">
+            <i class="bi bi-people-fill"></i>
+        </div>
+        <div>
+            <div class="quick-title">My Team</div>
+            <div class="quick-sub">View your field staff</div>
+        </div>
+        <i class="bi bi-chevron-right quick-arrow"></i>
+    </a>
+</div>
+
+<!-- Bottom row -->
+<div class="row g-4">
+
+    <!-- Pending table -->
+    <div class="col-lg-8">
+        <div class="sc">
+            <div class="sc-head">
+                <h6 class="sc-title">
+                    <i class="bi bi-hourglass-split"></i> Expenses Pending Review
+                    @if ((int)(ViewBag.PendingCount ?? 0) > 0)
+                    {
+                        <span class="st st-pend">@ViewBag.PendingCount</span>
+                    }
+                </h6>
+                <a asp-controller="Supervisor" asp-action="PendingExpenses" class="sc-viewall">
+                    View all <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            @if (Model != null && Model.Any())
+            {
+                <div style="overflow-x:auto">
+                    <table class="ex-table">
+                        <thead>
+                            <tr>
+                                <th>Staff</th>
+                                <th>Description</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th style="text-align:center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var e in Model)
+                            {
+                                var initial = (e.User?.UserName ?? "?")[0].ToString().ToUpper();
+                                <tr>
+                                    <td>
+                                        <div class="person-cell">
+                                            <div class="mini-av">@initial</div>
+                                            <span class="person-name">@(e.User?.UserName ?? "—")</span>
+                                        </div>
+                                    </td>
+                                    <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@e.Description</td>
+                                    <td>@e.ExpenseType</td>
+                                    <td class="amt">&#8369;@String.Format("{0:N2}", e.Amount)</td>
+                                    <td>
+                                        @if (e.Status == "Approved")
+                                        {
+                                            <span class="st st-ok"><i class="bi bi-check-circle-fill"></i> Approved</span>
+                                        }
+                                        else if (e.Status == "Pending")
+                                        {
+                                            <span class="st st-pend"><i class="bi bi-hourglass-split"></i> Pending</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="st st-rej"><i class="bi bi-x-circle-fill"></i> Rejected</span>
+                                        }
+                                    </td>
+                                    <td style="white-space:nowrap;color:var(--muted);font-size:.8rem">@e.ExpenseDate.ToString("MMM dd, yyyy")</td>
+                                    <td>
+                                        <div class="act-group">
+                                            @if (e.Status == "Pending")
+                                            {
+                                                <button type="button" class="act act-approve"
+                                                        data-bs-toggle="modal" data-bs-target="#approveModal"
+                                                        data-expense-id="@e.Id" title="Approve">
+                                                    <i class="bi bi-check-lg"></i> Approve
+                                                </button>
+                                                <button type="button" class="act act-reject"
+                                                        data-bs-toggle="modal" data-bs-target="#rejectModal"
+                                                        data-expense-id="@e.Id" title="Reject">
+                                                    <i class="bi bi-x-lg"></i> Reject
+                                                </button>
+                                            }
+                                            <a asp-controller="Supervisor" asp-action="Details" asp-route-id="@e.Id"
+                                               class="act act-view" title="View details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="empty-box">
+                    <i class="bi bi-check2-all"></i>
+                    <p class="mb-0">No pending expenses — you're all caught up!</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Right column -->
+    <div class="col-lg-4">
+
+        <!-- Breakdown -->
+        <div class="sc mb-4">
+            <div class="sc-head">
+                <h6 class="sc-title"><i class="bi bi-pie-chart"></i> Expense Breakdown</h6>
+            </div>
+            <div class="sc-body">
+                <div class="bar-wrap">
+                    <div class="bar-label">
+                        <span><i class="bi bi-circle-fill me-1" style="color:#10b981;font-size:0.6rem;"></i>Approved</span>
+                        <span>&#8369;@String.Format("{0:N0}", ViewBag.TotalApproved ?? 0)</span>
+                    </div>
+                    <div class="bar-track"><div class="bar-fill" style="width:72%;background:#10b981"></div></div>
+                </div>
+                <div class="bar-wrap">
+                    <div class="bar-label">
+                        <span><i class="bi bi-circle-fill me-1" style="color:#f59e0b;font-size:0.6rem;"></i>Pending</span>
+                        <span>@(ViewBag.PendingCount ?? 0) items</span>
+                    </div>
+                    <div class="bar-track"><div class="bar-fill" style="width:19%;background:#f59e0b"></div></div>
+                </div>
+                <div class="bar-wrap">
+                    <div class="bar-label">
+                        <span><i class="bi bi-circle-fill me-1" style="color:#ef4444;font-size:0.6rem;"></i>Rejected</span>
+                        <span>@(ViewBag.RejectedCount ?? 0) items</span>
+                    </div>
+                    <div class="bar-track"><div class="bar-fill" style="width:9%;background:#ef4444"></div></div>
+                </div>
+                <hr style="border-color:var(--border);margin:1rem 0" />
+                <canvas id="donutChart" height="185"></canvas>
+            </div>
+        </div>
+
+        <!-- Team activity -->
+        <div class="sc">
+            <div class="sc-head">
+                <h6 class="sc-title"><i class="bi bi-people"></i> Team Activity</h6>
+                <a asp-controller="Supervisor" asp-action="MyTeam" class="sc-viewall">
+                    View all <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+            @if (ViewBag.TeamActivity != null)
+            {
+                foreach (var m in ViewBag.TeamActivity)
+                {
+                    <div class="team-row">
+                        <div class="mini-av">@m.Initials</div>
+                        <div>
+                            <div class="team-name">@m.Name</div>
+                            <div class="team-sub">@m.ExpenseCount expense(s)</div>
+                        </div>
+                        <div class="team-amt">&#8369;@String.Format("{0:N0}", m.TotalAmount)</div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="empty-box">
+                    <i class="bi bi-people"></i>
+                    <p class="mb-0">No team activity yet.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        (function () {
+            var ctx = document.getElementById('donutChart');
+            if (!ctx) return;
+            new Chart(ctx.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Approved', 'Pending', 'Rejected'],
+                    datasets: [{
+                        data: [
+                            @Convert.ToDecimal(ViewBag.TotalApproved ?? 0).ToString(inv),
+                            @Convert.ToInt32(ViewBag.PendingCount ?? 0),
+                            @Convert.ToInt32(ViewBag.RejectedCount ?? 0)
+                        ],
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                        borderWidth: 4,
+                        borderColor: '#fff',
+                        hoverOffset: 5
+                    }]
+                },
+                options: {
+                    cutout: '67%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#7b8aaa',
+                                font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' },
+                                padding: 14,
+                                usePointStyle: true,
+                                pointStyleWidth: 8
+                            }
+                        },
+                        tooltip: { backgroundColor: '#0f1623', titleColor: '#fff', bodyColor: '#94a3b8', cornerRadius: 8, padding: 9 }
+                    },
+                    animation: { duration: 800, easing: 'easeInOutQuart' }
+                }
+            });
+        })();
+    </script>
+}

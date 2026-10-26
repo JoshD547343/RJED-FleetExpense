@@ -1,0 +1,763 @@
+﻿@model RJED_FleetExpense.Models.ExpenseReportViewModel
+@{
+    ViewData["Title"] = "Reports";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+
+    var selStatus = Model.Status ?? "";
+    var selDept = Model.Department ?? "";
+    var selCat = Model.Category ?? "";
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+}
+
+@section Styles {
+    <style>
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.4rem;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 4px solid transparent;
+            border-radius: 12px;
+            padding: 1.05rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            opacity: 0;
+            transform: translateY(10px);
+            animation: rise 0.38s ease forwards;
+        }
+
+            .stat-card:nth-child(1) {
+                border-left-color: #ca8a04;
+                animation-delay: 0s;
+            }
+
+            .stat-card:nth-child(2) {
+                border-left-color: var(--green);
+                animation-delay: 0.06s;
+            }
+
+            .stat-card:nth-child(3) {
+                border-left-color: #3b82f6;
+                animation-delay: 0.12s;
+            }
+
+            .stat-card:nth-child(4) {
+                border-left-color: var(--red);
+                animation-delay: 0.18s;
+            }
+
+        .stat-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .stat-label {
+            font-size: 0.68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .stat-sub {
+            font-size: 0.7rem;
+            color: var(--muted);
+        }
+
+        .stat-value {
+            margin-left: auto;
+            text-align: right;
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1.1;
+        }
+
+        .sc {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            margin-bottom: 1.4rem;
+        }
+
+        .sc-head {
+            padding: 0.85rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: .6rem;
+        }
+
+        .sc-title {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sc-body {
+            padding: 1.1rem 1.2rem;
+        }
+
+        .chart-wrap {
+            padding: 1.1rem 1.2rem;
+            height: 290px;
+        }
+
+        /* Filters */
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr) auto;
+            gap: 0.9rem;
+            align-items: end;
+        }
+
+        .filter-label {
+            display: block;
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            margin-bottom: 4px;
+        }
+
+        .filter-input {
+            width: 100%;
+            padding: 7px 11px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.84rem;
+            background: #fff;
+            color: var(--text);
+        }
+
+            .filter-input:focus {
+                outline: none;
+                border-color: var(--ink-2);
+            }
+
+        .filter-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-main {
+            background: var(--ink);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+
+            .btn-main:hover {
+                color: #fff;
+                opacity: .9;
+            }
+
+        .btn-green {
+            background: var(--green);
+        }
+
+        .btn-act {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 7px 14px;
+            border-radius: 8px;
+            border: 1.5px solid var(--border);
+            background: var(--slate);
+            color: var(--muted);
+            font-size: .82rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+            .btn-act:hover {
+                color: var(--ink);
+                border-color: var(--ink-2);
+            }
+
+        /* Tables */
+        .ex-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .ex-table thead th {
+                background: #f8faff;
+                color: var(--muted);
+                font-size: 0.66rem;
+                text-transform: uppercase;
+                letter-spacing: .6px;
+                padding: 0.7rem 1rem;
+                text-align: left;
+                white-space: nowrap;
+            }
+
+            .ex-table tbody td {
+                padding: 0.78rem 1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: .84rem;
+                vertical-align: middle;
+            }
+
+            .ex-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .ex-table tbody tr:hover {
+                background: #f8faff;
+            }
+
+        .name-cell {
+            font-weight: 600;
+        }
+
+        .sub-text {
+            display: block;
+            font-size: 0.72rem;
+            color: var(--muted);
+            font-weight: 400;
+        }
+
+        .expense-id {
+            color: var(--muted);
+            font-size: .78rem;
+            font-family: "Consolas", monospace;
+            white-space: nowrap;
+        }
+
+        .amt {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-weight: 700;
+            color: var(--ink);
+            white-space: nowrap;
+        }
+
+        .desc-cell {
+            max-width: 240px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--muted);
+        }
+
+        .share-cell {
+            min-width: 130px;
+        }
+
+        .share-track {
+            height: 7px;
+            background: var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 3px;
+        }
+
+        .share-fill {
+            height: 100%;
+            border-radius: 10px;
+            background: #10b981;
+        }
+
+        .share-text {
+            font-size: 0.72rem;
+            color: var(--muted);
+        }
+
+        .rank {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 8px;
+            background: var(--ink-3);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.75rem;
+        }
+
+        .st {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .st-ok {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .st-acc {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+
+        .st-pend {
+            background: #fffbeb;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        .st-rej {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .empty-box {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--muted);
+        }
+
+            .empty-box i {
+                font-size: 2rem;
+                opacity: .25;
+                display: block;
+                margin-bottom: .5rem;
+            }
+
+        @@keyframes rise {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@media (max-width: 1199px) {
+            .stat-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .filter-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .filter-actions {
+                grid-column: 1 / -1;
+            }
+        }
+
+        @@media (max-width: 575px) {
+            .stat-grid, .filter-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @@media print {
+            .no-print {
+                display: none !important;
+            }
+
+            .stat-card, .sc {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+        }
+    </style>
+}
+
+<!-- Title row -->
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <small class="text-muted">
+        @if (Model.Generated)
+        {
+            @:@Model.DateFrom?.ToString("MMM dd, yyyy") &ndash; @Model.DateTo?.ToString("MMM dd, yyyy")
+        }
+        else
+        {
+            @:Choose your filters, then generate a report
+        }
+    </small>
+    @if (Model.Generated && Model.TotalClaims > 0)
+    {
+        <div class="d-flex gap-2 no-print">
+            <button type="button" class="btn-act" onclick="window.print()">
+                <i class="bi bi-printer"></i> Print
+            </button>
+            <a class="btn-main btn-green" href="/Admin/Dashboard/Reports/Export@(Context.Request.QueryString)">
+                <i class="bi bi-file-earmark-arrow-down"></i> Export CSV
+            </a>
+        </div>
+    }
+</div>
+
+<!-- Filters -->
+<form method="get" action="/Admin/Dashboard/Reports" class="sc no-print">
+    <input type="hidden" name="generated" value="true" />
+    <div class="sc-body">
+        <div class="filter-grid">
+            <div>
+                <label class="filter-label">From</label>
+                <input type="date" name="dateFrom" class="filter-input" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div>
+                <label class="filter-label">To</label>
+                <input type="date" name="dateTo" class="filter-input" value="@Model.DateTo?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div>
+                <label class="filter-label">Category</label>
+                <select name="category" class="filter-input">
+                    <option value="" selected="@(selCat == "")">All Categories</option>
+                    @foreach (var c in Model.CategoryOptions)
+                    {
+                        <option value="@c" selected="@(selCat == c)">@c</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="filter-label">Status</label>
+                <select name="status" class="filter-input">
+                    <option value="" selected="@(selStatus == "")">All Status</option>
+                    <option value="Pending" selected="@(selStatus == "Pending")">Pending</option>
+                    <option value="DepartmentApproved" selected="@(selStatus == "DepartmentApproved")">Department Approved</option>
+                    <option value="ForAccounting" selected="@(selStatus == "ForAccounting")">For Accounting</option>
+                    <option value="Reimbursed" selected="@(selStatus == "Reimbursed")">Reimbursed</option>
+                    <option value="Rejected" selected="@(selStatus == "Rejected")">Rejected</option>
+                </select>
+            </div>
+            <div>
+                <label class="filter-label">Department</label>
+                <select name="department" class="filter-input">
+                    <option value="" selected="@(selDept == "")">All Departments</option>
+                    @foreach (var d in Model.DepartmentOptions)
+                    {
+                        <option value="@d" selected="@(selDept == d)">@d</option>
+                    }
+                </select>
+            </div>
+            <div class="filter-actions">
+                <button type="submit" class="btn-main"><i class="bi bi-bar-chart-line"></i> Generate Report</button>
+                <a href="/Admin/Dashboard/Reports" class="btn-act">Reset</a>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (!Model.Generated)
+{
+    <div class="sc">
+        <div class="empty-box">
+            <i class="bi bi-file-earmark-bar-graph"></i>
+            <h6 class="mb-1" style="color:var(--ink)">No report generated yet</h6>
+            <p class="mb-0">Pick a date range and filters above, then click Generate Report.</p>
+        </div>
+    </div>
+}
+else if (Model.TotalClaims == 0)
+{
+    <div class="sc">
+        <div class="empty-box">
+            <i class="bi bi-inbox"></i>
+            <p class="mb-0">No expenses match these filters. Try a wider date range.</p>
+        </div>
+    </div>
+}
+else
+{
+    <!-- Stat Cards -->
+    <div class="stat-grid">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#fefce8;color:#ca8a04"><i class="bi bi-receipt-cutoff"></i></div>
+            <div>
+                <div class="stat-label">Grand Total</div>
+                <div class="stat-sub">@Model.TotalClaims claims &middot; avg &#8369;@Model.AvgClaim.ToString("N0")</div>
+            </div>
+            <div class="stat-value">&#8369;@Model.GrandTotal.ToString("N0")</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#ecfdf5;color:var(--green)"><i class="bi bi-cash-coin"></i></div>
+            <div>
+                <div class="stat-label">Reimbursed</div>
+                <div class="stat-sub">Already paid out</div>
+            </div>
+            <div class="stat-value">&#8369;@Model.TotalReimbursed.ToString("N0")</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#f0f9ff;color:#3b82f6"><i class="bi bi-hourglass-split"></i></div>
+            <div>
+                <div class="stat-label">Awaiting Payment</div>
+                <div class="stat-sub">Pending or approved, unpaid</div>
+            </div>
+            <div class="stat-value">&#8369;@Model.TotalPending.ToString("N0")</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#fef2f2;color:var(--red)"><i class="bi bi-x-circle"></i></div>
+            <div>
+                <div class="stat-label">Rejected</div>
+                <div class="stat-sub">Rejected claims</div>
+            </div>
+            <div class="stat-value">@Model.RejectedCount</div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="sc">
+                <div class="sc-head">
+                    <h6 class="sc-title"><i class="bi bi-graph-up"></i> Monthly Trend</h6>
+                    <small class="text-muted">Total claimed per month</small>
+                </div>
+                <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="sc">
+                <div class="sc-head">
+                    <h6 class="sc-title"><i class="bi bi-pie-chart"></i> By Category</h6>
+                </div>
+                <div class="chart-wrap"><canvas id="categoryChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Breakdown tables -->
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="sc">
+                <div class="sc-head">
+                    <h6 class="sc-title"><i class="bi bi-tags"></i> Category Breakdown</h6>
+                </div>
+                <div style="overflow-x:auto">
+                    <table class="ex-table">
+                        <thead>
+                            <tr><th>Category</th><th>Claims</th><th>Total</th><th>Share</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var b in Model.ByCategory)
+                            {
+                                <tr>
+                                    <td class="name-cell">@b.Name</td>
+                                    <td>@b.Count</td>
+                                    <td class="amt">&#8369;@b.Total.ToString("N2")</td>
+                                    <td class="share-cell">
+                                        <div class="share-track"><div class="share-fill" style="width:@b.Pct.ToString("0.#", inv)%"></div></div>
+                                        <span class="share-text">@b.Pct.ToString("0.#")%</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="sc">
+                <div class="sc-head">
+                    <h6 class="sc-title"><i class="bi bi-building"></i> Department Breakdown</h6>
+                </div>
+                <div style="overflow-x:auto">
+                    <table class="ex-table">
+                        <thead>
+                            <tr><th>Department</th><th>Claims</th><th>Total</th><th>Share</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var b in Model.ByDepartment)
+                            {
+                                <tr>
+                                    <td class="name-cell">@b.Name</td>
+                                    <td>@b.Count</td>
+                                    <td class="amt">&#8369;@b.Total.ToString("N2")</td>
+                                    <td class="share-cell">
+                                        <div class="share-track"><div class="share-fill" style="width:@b.Pct.ToString("0.#", inv)%;background:#3b82f6"></div></div>
+                                        <span class="share-text">@b.Pct.ToString("0.#")%</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top claimants -->
+    <div class="sc">
+        <div class="sc-head">
+            <h6 class="sc-title"><i class="bi bi-people"></i> Top Claimants</h6>
+            <small class="text-muted">Top 10 by total amount</small>
+        </div>
+        <div style="overflow-x:auto">
+            <table class="ex-table">
+                <thead>
+                    <tr><th>#</th><th>Employee</th><th>Claims</th><th>Total</th><th>Share</th></tr>
+                </thead>
+                <tbody>
+                    @{
+                        var rank = 0;
+                    }
+                    @foreach (var b in Model.TopClaimants)
+                    {
+                        rank++;
+                        <tr>
+                            <td><span class="rank">@rank</span></td>
+                            <td class="name-cell">@b.Name<span class="sub-text">@b.Sub</span></td>
+                            <td>@b.Count</td>
+                            <td class="amt">&#8369;@b.Total.ToString("N2")</td>
+                            <td class="share-cell">
+                                <div class="share-track"><div class="share-fill" style="width:@b.Pct.ToString("0.#", inv)%"></div></div>
+                                <span class="share-text">@b.Pct.ToString("0.#")%</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Detail table -->
+    <div class="sc">
+        <div class="sc-head">
+            <h6 class="sc-title"><i class="bi bi-list-ul"></i> Expense Details</h6>
+            <small class="text-muted">@Model.TotalClaims record@(Model.TotalClaims == 1 ? "" : "s")</small>
+        </div>
+        <div style="overflow-x:auto">
+            <table class="ex-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Date</th>
+                        <th>Employee</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.Rows)
+                    {
+                        <tr>
+                            <td class="expense-id">EXP-@r.ExpenseId.ToString("D4")</td>
+                            <td style="white-space:nowrap;color:var(--muted);font-size:0.8rem">@r.ExpenseDate.ToString("MMM dd, yyyy")</td>
+                            <td class="name-cell">@r.EmployeeName<span class="sub-text">@r.Department</span></td>
+                            <td>@r.Category</td>
+                            <td class="desc-cell" title="@r.Description">@(string.IsNullOrWhiteSpace(r.Description) ? "—" : r.Description)</td>
+                            <td class="amt">&#8369;@r.Amount.ToString("N2")</td>
+                            <td>
+                                @if (r.Status == "Reimbursed")
+                                {
+                                    <span class="st st-ok"><i class="bi bi-check-circle-fill"></i> Reimbursed</span>
+                                }
+                                else if (r.Status == "Rejected")
+                                {
+                                    <span class="st st-rej"><i class="bi bi-x-circle-fill"></i> Rejected</span>
+                                }
+                                else if (r.Status == "DepartmentApproved" || r.Status == "ForAccounting")
+                                {
+                                    <span class="st st-acc"><i class="bi bi-send-check-fill"></i> With Accounting</span>
+                                }
+                                else
+                                {
+                                    <span class="st st-pend"><i class="bi bi-hourglass-split"></i> @r.Status</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    @if (Model.Generated && Model.TotalClaims > 0)
+    {
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            const peso = v => '₱' + Number(v).toLocaleString('en-PH', { minimumFractionDigits: 2 });
+
+            new Chart(document.getElementById('trendChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TrendLabels)),
+                    datasets: [{
+                        label: 'Total claimed',
+                        data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TrendData)),
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16,185,129,0.10)',
+                        fill: true, tension: 0.35, borderWidth: 2.5,
+                        pointRadius: 4, pointBackgroundColor: '#10b981'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: ctx => peso(ctx.parsed.y) } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#eef0f8' }, ticks: { callback: v => '₱' + Number(v).toLocaleString('en-PH') } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            new Chart(document.getElementById('categoryChart').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ByCategory.Select(b => b.Name))),
+                    datasets: [{
+                        data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ByCategory.Select(b => b.Total))),
+                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#ca8a04', '#7b1fa2', '#00897b', '#8d6e63'],
+                        borderWidth: 3,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '62%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 14, font: { size: 12 } } },
+                        tooltip: { callbacks: { label: ctx => ctx.label + ': ' + peso(ctx.parsed) } }
+                    }
+                }
+            });
+        </script>
+    }
+}

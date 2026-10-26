@@ -1,0 +1,425 @@
+﻿@model IEnumerable<RJED_FleetExpense.Models.Expense>
+@{
+    ViewData["Title"] = "Department Dashboard";
+    Layout = "~/Views/Shared/_LayoutDepartment.cshtml";
+}
+
+@section Styles {
+    <style>
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.4rem;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 4px solid transparent;
+            border-radius: 12px;
+            padding: 1.05rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            opacity: 0;
+            transform: translateY(10px);
+            animation: rise 0.38s ease forwards;
+        }
+
+            .stat-card:nth-child(1) {
+                border-left-color: var(--green);
+                animation-delay: 0s;
+            }
+
+            .stat-card:nth-child(2) {
+                border-left-color: var(--green);
+                animation-delay: 0.06s;
+            }
+
+            .stat-card:nth-child(3) {
+                border-left-color: var(--red);
+                animation-delay: 0.12s;
+            }
+
+        .stat-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .stat-label {
+            font-size: 0.68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .stat-sub {
+            font-size: 0.7rem;
+            color: var(--muted);
+        }
+
+        .stat-value {
+            margin-left: auto;
+            text-align: right;
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1.1;
+        }
+
+        .quick-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.85rem;
+            margin-bottom: 1.4rem;
+        }
+
+        .quick-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem 1.15rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            text-decoration: none;
+            color: var(--text);
+            transition: border-color 0.16s, box-shadow 0.16s, transform 0.16s;
+            opacity: 0;
+            transform: translateY(10px);
+            animation: rise 0.38s ease forwards;
+        }
+
+            .quick-card:nth-child(1) {
+                animation-delay: 0.2s;
+            }
+
+            .quick-card:nth-child(2) {
+                animation-delay: 0.25s;
+            }
+
+            .quick-card:hover {
+                border-color: var(--ink-2);
+                box-shadow: 0 4px 14px rgba(15,22,35,0.07);
+                transform: translateY(-2px);
+                color: var(--ink);
+            }
+
+        .quick-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .quick-title {
+            font-weight: 700;
+            font-size: 0.875rem;
+            color: var(--ink);
+        }
+
+        .quick-sub {
+            font-size: 0.73rem;
+            color: var(--muted);
+            margin-top: 1px;
+        }
+
+        .quick-arrow {
+            margin-left: auto;
+            color: var(--muted);
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .sc {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+        }
+
+        .sc-head {
+            padding: 0.85rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sc-title {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sc-viewall {
+            font-size: .78rem;
+            font-weight: 600;
+            color: var(--green);
+            text-decoration: none;
+        }
+
+        .ex-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .ex-table thead th {
+                background: #f8faff;
+                color: var(--muted);
+                font-size: 0.66rem;
+                text-transform: uppercase;
+                letter-spacing: .6px;
+                padding: 0.7rem 1rem;
+                text-align: left;
+            }
+
+            .ex-table tbody td {
+                padding: 0.78rem 1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: .84rem;
+            }
+
+            .ex-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .ex-table tbody tr:hover {
+                background: #f8faff;
+            }
+
+        .amt {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .st {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .st-ok {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .st-acc {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+
+        .st-rej {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .btn-view {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1.5px solid var(--border);
+            background: var(--slate);
+            color: var(--muted);
+            font-size: .76rem;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+            .btn-view:hover {
+                color: var(--ink);
+                border-color: var(--ink-2);
+            }
+
+        .empty-box {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: var(--muted);
+        }
+
+            .empty-box i {
+                font-size: 2rem;
+                opacity: .25;
+                display: block;
+                margin-bottom: .5rem;
+            }
+
+        @@keyframes rise {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@media (max-width: 992px) {
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @@media (max-width: 768px) {
+            .quick-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+}
+
+<!-- Stat Cards -->
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(16,185,129,0.10);color:var(--green)">
+            <i class="bi bi-cash-stack"></i>
+        </div>
+        <div>
+            <div class="stat-label">This Month's Expenses</div>
+            <div class="stat-sub">@DateTime.Now.ToString("MMMM yyyy")</div>
+        </div>
+        <div class="stat-value">&#8369;@String.Format("{0:N0}", ViewBag.TotalExpensesThisMonth ?? 0)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#ecfdf5;color:var(--green)">
+            <i class="bi bi-check2-circle"></i>
+        </div>
+        <div>
+            <div class="stat-label">Total Approved</div>
+            <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-value">&#8369;@String.Format("{0:N0}", ViewBag.TotalApproved ?? 0)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fef2f2;color:var(--red)">
+            <i class="bi bi-x-circle"></i>
+        </div>
+        <div>
+            <div class="stat-label">Total Rejected</div>
+            <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-value">&#8369;@String.Format("{0:N0}", ViewBag.TotalRejected ?? 0)</div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="quick-grid">
+    <a asp-controller="Department" asp-action="Expenses" class="quick-card">
+        <div class="quick-icon" style="background:rgba(16,185,129,0.10);color:var(--green)">
+            <i class="bi bi-receipt"></i>
+        </div>
+        <div>
+            <div class="quick-title">View Expenses</div>
+            <div class="quick-sub">Browse and manage all expenses</div>
+        </div>
+        <i class="bi bi-chevron-right quick-arrow"></i>
+    </a>
+    <a asp-controller="Department" asp-action="MyTeam" class="quick-card">
+        <div class="quick-icon" style="background:#ecfdf5;color:var(--green)">
+            <i class="bi bi-people-fill"></i>
+        </div>
+        <div>
+            <div class="quick-title">My Team</div>
+            <div class="quick-sub">View department members</div>
+        </div>
+        <i class="bi bi-chevron-right quick-arrow"></i>
+    </a>
+</div>
+
+<!-- Recent Decisions -->
+<div class="sc">
+    <div class="sc-head">
+        <h6 class="sc-title"><i class="bi bi-clock-history"></i> Recent Decisions</h6>
+        <a asp-controller="Department" asp-action="Expenses" class="sc-viewall">
+            View All Expenses <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
+
+    @if (Model != null && Model.Any())
+    {
+        <div style="overflow-x:auto">
+            <table class="ex-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Employee</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Submitted</th>
+                        <th>Status</th>
+                        <th style="text-align:center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var e in Model)
+                    {
+                        <tr>
+                            <td style="color:var(--muted);font-size:.78rem">@e.Id</td>
+                            <td>@(e.User?.FullName ?? e.User?.UserName ?? "—")</td>
+                            <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@e.Description</td>
+                            <td>@e.ExpenseType</td>
+                            <td class="amt">&#8369;@String.Format("{0:N2}", e.Amount)</td>
+                            <td style="white-space:nowrap;color:var(--muted);font-size:0.8rem">@e.DateSubmitted.ToString("MMM dd, yyyy")</td>
+                            <td>
+                                @if (e.Status == "Rejected")
+                                {
+                                    <span class="st st-rej"><i class="bi bi-x-circle-fill"></i> Rejected</span>
+                                }
+                                else if (e.Status == "DepartmentApproved" || e.Status == "ForAccounting")
+                                {
+                                    <span class="st st-acc"><i class="bi bi-send-check-fill"></i> With Accounting</span>
+                                }
+                                else
+                                {
+                                    <span class="st st-ok"><i class="bi bi-check-circle-fill"></i> @e.Status</span>
+                                }
+                            </td>
+                            <td style="text-align:center">
+                                <a asp-controller="Department" asp-action="Details" asp-route-id="@e.Id" class="btn-view">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-box">
+            <i class="bi bi-inbox"></i>
+            <p class="mb-0">No decisions yet.</p>
+        </div>
+    }
+</div>

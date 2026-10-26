@@ -1,0 +1,271 @@
+﻿@model List<RJED_FleetExpense.Models.Vehicle>
+@{
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";   // <-- use the same layout name your other AdminDashboard views use
+    ViewData["Title"] = "Vehicles";
+    var usage = ViewBag.Usage as Dictionary<string, int> ?? new Dictionary<string, int>();
+}
+
+@section Styles {
+    <style>
+        .v-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .v-head {
+            padding: 1rem 1.35rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: .75rem;
+        }
+
+            .v-head h6 {
+                font-family: 'Familjen Grotesk',sans-serif;
+                font-weight: 700;
+                margin: 0;
+                color: var(--ink);
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+        .v-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .v-table th {
+                padding: .7rem 1rem;
+                font-size: .72rem;
+                text-transform: uppercase;
+                letter-spacing: .5px;
+                color: var(--muted);
+                background: #f8faff;
+                border-bottom: 2px solid var(--border);
+                text-align: left;
+            }
+
+            .v-table td {
+                padding: .75rem 1rem;
+                border-bottom: 1px solid var(--border);
+                vertical-align: middle;
+                font-size: .845rem;
+            }
+
+            .v-table tbody tr:hover {
+                background: #f8faff;
+            }
+
+        .plate {
+            font-family: 'Familjen Grotesk',sans-serif;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            color: var(--ink);
+            background: #f4f6fb;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 3px 10px;
+        }
+
+        .b-active {
+            background: #ecfdf5;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+            border-radius: 20px;
+            padding: 2px 10px;
+            font-size: .72rem;
+            font-weight: 700;
+        }
+
+        .b-maint {
+            background: #fff7ed;
+            color: #c2410c;
+            border: 1px solid #fed7aa;
+            border-radius: 20px;
+            padding: 2px 10px;
+            font-size: .72rem;
+            font-weight: 700;
+        }
+
+        .b-retired {
+            background: #f3f4f6;
+            color: #6b7280;
+            border: 1px solid #e5e7eb;
+            border-radius: 20px;
+            padding: 2px 10px;
+            font-size: .72rem;
+            font-weight: 700;
+        }
+
+        .btn-add {
+            background: var(--ink);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: .5rem 1.1rem;
+            font-weight: 600;
+            font-size: .855rem;
+        }
+
+            .btn-add:hover {
+                background: var(--ink-2);
+                color: #fff;
+            }
+
+        .btn-sm-act {
+            border: 1px solid var(--border);
+            background: #fff;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: .78rem;
+            color: var(--muted);
+            cursor: pointer;
+        }
+
+            .btn-sm-act:hover {
+                border-color: var(--ink);
+                color: var(--ink);
+            }
+
+            .btn-sm-act.danger:hover {
+                border-color: #dc2626;
+                color: #dc2626;
+            }
+    </style>
+}
+
+<div class="v-card">
+    <div class="v-head">
+        <h6><i class="bi bi-truck"></i> Vehicles</h6>
+        <button type="button" class="btn-add" data-bs-toggle="modal" data-bs-target="#vehicleModal" onclick="openVehicle()">
+            <i class="bi bi-plus-lg"></i> Add Vehicle
+        </button>
+    </div>
+
+    <div style="overflow-x:auto">
+        <table class="v-table">
+            <thead>
+                <tr>
+                    <th>Plate No.</th>
+                    <th>Type</th>
+                    <th>Expenses</th>
+                    <th>Status</th>
+                    <th style="text-align:right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="5" class="text-center text-muted py-4">No vehicles yet. Click <strong>Add Vehicle</strong>.</td></tr>
+                }
+                @foreach (var v in Model)
+                {
+                    usage.TryGetValue(v.PlateNumber, out var cnt);
+                    <tr>
+                        <td><span class="plate">@v.PlateNumber</span></td>
+                        <td>@(string.IsNullOrWhiteSpace(v.Type) ? "—" : v.Type)</td>
+                        <td>@cnt</td>
+                        <td>
+                            @if (v.Status == "Active")
+                            {
+                                <span class="b-active">Active</span>
+                            }
+                            else if (v.Status == "Maintenance")
+                            {
+
+                                <span class="b-maint">Maintenance</span>
+                            }
+                            else
+                            {
+
+                                <span class="b-retired">@v.Status</span>
+                            }
+                        </td>
+                        <td style="text-align:right; white-space:nowrap">
+                            <button type="button" class="btn-sm-act"
+                                    data-bs-toggle="modal" data-bs-target="#vehicleModal"
+                                    data-id="@v.VehicleId"
+                                    data-plate="@v.PlateNumber"
+                                    data-type="@v.Type"
+                                    data-status="@v.Status"
+                                    onclick="openVehicle(this)">
+                                <i class="bi bi-pencil"></i> Edit
+                            </button>
+                            <form asp-controller="AdminDashboard" asp-action="DeleteVehicle" method="post" class="d-inline"
+                                  onsubmit="return confirm('Remove vehicle @v.PlateNumber?');">
+                                <input type="hidden" name="id" value="@v.VehicleId" />
+                                <button type="submit" class="btn-sm-act danger"><i class="bi bi-trash"></i> Remove</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add / Edit modal -->
+<div class="modal fade" id="vehicleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:14px;border:none">
+            <form asp-controller="AdminDashboard" asp-action="SaveVehicle" method="post">
+                <input type="hidden" name="vehicleId" id="vId" value="0" />
+                <div class="modal-header">
+                    <h6 class="modal-title" id="vTitle">Add Vehicle</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Plate Number <span class="text-danger">*</span></label>
+                        <input type="text" name="plateNumber" id="vPlate" class="form-control text-uppercase"
+                               maxlength="6" minlength="6" pattern="[A-Za-z0-9]{6}" required placeholder="LUX234" />
+                        <div class="form-text">Exactly 6 letters/digits, e.g. LUX234.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Type</label>
+                        <input type="text" name="type" id="vType" class="form-control" maxlength="50"
+                               list="vehicleTypes" placeholder="e.g. Truck, Van" />
+                        <datalist id="vehicleTypes">
+                            <option value="Truck"></option>
+                            <option value="Van"></option>
+                            <option value="Pickup"></option>
+                            <option value="Car"></option>
+                            <option value="Motorcycle"></option>
+                        </datalist>
+                    </div>
+                    <div>
+                        <label class="form-label fw-semibold">Status</label>
+                        <select name="status" id="vStatus" class="form-select">
+                            <option value="Active">Active</option>
+                            <option value="Maintenance">Maintenance</option>
+                            <option value="Retired">Retired</option>
+                        </select>
+                        <div class="form-text">Only Active vehicles appear in the employee expense form.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-add">Save Vehicle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openVehicle(btn) {
+            const edit = !!btn;
+            document.getElementById('vTitle').textContent = edit ? 'Edit Vehicle' : 'Add Vehicle';
+            document.getElementById('vId').value     = edit ? btn.dataset.id : 0;
+            document.getElementById('vPlate').value  = edit ? btn.dataset.plate : '';
+            document.getElementById('vType').value   = edit ? (btn.dataset.type || '') : '';
+            document.getElementById('vStatus').value = edit ? btn.dataset.status : 'Active';
+        }
+    </script>
+}

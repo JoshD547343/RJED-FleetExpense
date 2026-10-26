@@ -1,0 +1,871 @@
+﻿@model RJED_FleetExpense.ViewModels.EmployeeDashboardViewModel
+@{
+    ViewData["Title"] = "Submit New Expense";
+    Layout = "~/Views/Shared/_LayoutEmployee.cshtml";
+    Model.MyExpenses ??= new List<Expense>();
+
+    var approvedSet = new[] { "Approved", "DepartmentApproved", "ForAccounting" };
+    var total = Model.MyExpenses?.Count() ?? 0;
+    var reimbursed = Model.MyExpenses?.Count(e => e.Status == "Reimbursed") ?? 0;
+    var approved = Model.MyExpenses?.Count(e => approvedSet.Contains(e.Status)) ?? 0;
+    var rejected = Model.MyExpenses?.Count(e => e.Status == "Rejected") ?? 0;
+    var pending = total - reimbursed - approved - rejected;
+    var totalAmt = Model.MyExpenses?.Sum(e => e.Amount) ?? 0;
+}
+
+@section Styles {
+    <style>
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.4rem;
+        }
+
+        .stat-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-left: 4px solid transparent;
+            border-radius: 12px;
+            padding: 1.05rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            opacity: 0;
+            transform: translateY(10px);
+            animation: rise 0.38s ease forwards;
+        }
+
+            .stat-card:nth-child(1) {
+                border-left-color: #3b82f6;
+                animation-delay: 0s;
+            }
+
+            .stat-card:nth-child(2) {
+                border-left-color: #f59e0b;
+                animation-delay: 0.05s;
+            }
+
+            .stat-card:nth-child(3) {
+                border-left-color: #ca8a04;
+                animation-delay: 0.1s;
+            }
+
+            .stat-card:nth-child(4) {
+                border-left-color: #10b981;
+                animation-delay: 0.15s;
+            }
+
+            .stat-card:nth-child(5) {
+                border-left-color: #ef4444;
+                animation-delay: 0.2s;
+            }
+
+        .stat-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .stat-label {
+            font-size: 0.68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .stat-sub {
+            font-size: 0.7rem;
+            color: var(--muted);
+        }
+
+        .stat-value {
+            margin-left: auto;
+            text-align: right;
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1.1;
+        }
+
+        .sc {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            margin-bottom: 1.4rem;
+        }
+
+        .sc-head {
+            padding: 0.85rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: .6rem;
+        }
+
+        .sc-title {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-main {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--ink);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: .82rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+            .btn-main:hover {
+                opacity: .9;
+                color: #fff;
+            }
+
+        .toolbar {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 1.2rem;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+            .search-box input {
+                padding: 6px 11px 6px 30px;
+                border: 1.5px solid var(--border);
+                border-radius: 8px;
+                font-size: .82rem;
+                color: var(--text);
+                background: #fff;
+                outline: none;
+                width: 220px;
+            }
+
+                .search-box input:focus {
+                    border-color: var(--ink);
+                }
+
+            .search-box i {
+                position: absolute;
+                left: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--muted);
+                font-size: .8rem;
+            }
+
+        /* Table */
+        .ex-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .ex-table thead th {
+                background: #f8faff;
+                color: var(--muted);
+                font-size: 0.66rem;
+                text-transform: uppercase;
+                letter-spacing: .6px;
+                padding: 0.7rem 1rem;
+                text-align: left;
+                white-space: nowrap;
+            }
+
+            .ex-table tbody td {
+                padding: 0.78rem 1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: .84rem;
+                vertical-align: middle;
+            }
+
+            .ex-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .ex-table tbody tr:hover {
+                background: #f8faff;
+            }
+
+        .amt {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-weight: 700;
+            color: var(--ink);
+            white-space: nowrap;
+        }
+
+        .type-chip {
+            display: inline-block;
+            background: #f1f5f9;
+            color: var(--ink);
+            padding: 2px 9px;
+            border-radius: 6px;
+            font-size: 0.76rem;
+            font-weight: 600;
+        }
+
+        .st {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .st-ok {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .st-acc {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+
+        .st-pend {
+            background: #fffbeb;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        .st-rej {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .btn-view {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1.5px solid var(--border);
+            background: var(--slate);
+            color: var(--muted);
+            font-size: .76rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+            .btn-view:hover {
+                color: var(--ink);
+                border-color: var(--ink);
+            }
+
+        .empty-box {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: var(--muted);
+        }
+
+            .empty-box i {
+                font-size: 2rem;
+                opacity: .25;
+                display: block;
+                margin-bottom: .5rem;
+            }
+
+        /* Modals */
+        .modal-card {
+            border: none !important;
+            border-radius: 12px !important;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.15) !important;
+            overflow: hidden;
+        }
+
+        .modal-hd {
+            padding: 1rem 1.3rem;
+            background: var(--ink);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-hd-title {
+            font-size: .95rem;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin: 0;
+        }
+
+        .modal-ft {
+            padding: .85rem 1.3rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: .5rem;
+        }
+
+        .form-section-label {
+            font-size: 0.66rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted);
+            margin-bottom: .85rem;
+            padding-bottom: .4rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .field-label {
+            font-size: .68rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+            .field-label span {
+                color: #ef4444;
+            }
+
+        .form-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: .84rem;
+            color: var(--text);
+            background: #fff;
+            outline: none;
+        }
+
+            .form-input:focus {
+                border-color: var(--ink);
+            }
+
+        .input-prefix {
+            display: flex;
+            align-items: center;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+            .input-prefix:focus-within {
+                border-color: var(--ink);
+            }
+
+        .input-prefix-text {
+            padding: 8px 12px;
+            background: var(--slate);
+            border-right: 1.5px solid var(--border);
+            font-size: .84rem;
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        .input-prefix input {
+            flex: 1;
+            border: none;
+            padding: 8px 12px;
+            font-size: .84rem;
+            color: var(--text);
+            outline: none;
+            background: transparent;
+        }
+
+        .form-hint {
+            font-size: .72rem;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        .btn-cancel {
+            padding: 7px 16px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            background: var(--slate);
+            color: var(--muted);
+            font-size: .84rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+            .btn-cancel:hover {
+                color: var(--ink);
+            }
+
+        .btn-submit {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 18px;
+            background: var(--ink);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: .84rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+            .btn-submit:hover {
+                opacity: .9;
+            }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 110px 1fr;
+            gap: .6rem .5rem;
+        }
+
+        .detail-dt {
+            font-size: .68rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            padding-top: 2px;
+        }
+
+        .detail-dd {
+            font-size: .85rem;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .detail-amount-val {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .file-zone {
+            border: 2px dashed var(--border);
+            border-radius: 10px;
+            padding: 1.2rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+        }
+
+            .file-zone:hover, .file-zone.drag-over {
+                border-color: #10b981;
+                background: rgba(16,185,129,0.04);
+            }
+
+            .file-zone input[type="file"] {
+                position: absolute;
+                inset: 0;
+                opacity: 0;
+                cursor: pointer;
+            }
+
+            .file-zone i {
+                font-size: 1.5rem;
+                color: var(--muted);
+                display: block;
+                margin-bottom: 6px;
+            }
+
+            .file-zone p {
+                font-size: .8rem;
+                color: var(--muted);
+                margin: 0;
+            }
+
+            .file-zone strong {
+                color: #10b981;
+            }
+
+        .file-names {
+            margin-top: 6px;
+            font-size: .75rem;
+            color: var(--ink);
+            font-weight: 600;
+        }
+
+        @@keyframes rise {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@media (max-width: 576px) {
+            .search-box input {
+                width: 100%;
+            }
+        }
+    </style>
+}
+
+<!-- Flash messages -->
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="flash-bar flash-success mb-4" style="margin:0 0 1.25rem">
+        <i class="bi bi-check-circle-fill"></i> @TempData["SuccessMessage"]
+    </div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="flash-bar flash-error mb-4" style="margin:0 0 1.25rem">
+        <i class="bi bi-x-circle-fill"></i> @TempData["ErrorMessage"]
+    </div>
+}
+
+<!-- Stat Cards -->
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#eff6ff;color:#3b82f6"><i class="bi bi-collection"></i></div>
+        <div>
+            <div class="stat-label">Total Submitted</div>
+            <div class="stat-sub">&#8369;@totalAmt.ToString("N0") total</div>
+        </div>
+        <div class="stat-value">@total</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fffbeb;color:#f59e0b"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+            <div class="stat-label">Pending</div>
+            <div class="stat-sub">In review</div>
+        </div>
+        <div class="stat-value">@pending</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fefce8;color:#ca8a04"><i class="bi bi-send-check"></i></div>
+        <div>
+            <div class="stat-label">Approved</div>
+            <div class="stat-sub">Awaiting payout</div>
+        </div>
+        <div class="stat-value">@approved</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#ecfdf5;color:#10b981"><i class="bi bi-cash-coin"></i></div>
+        <div>
+            <div class="stat-label">Reimbursed</div>
+            <div class="stat-sub">Paid out</div>
+        </div>
+        <div class="stat-value">@reimbursed</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fef2f2;color:#ef4444"><i class="bi bi-x-circle"></i></div>
+        <div>
+            <div class="stat-label">Rejected</div>
+            <div class="stat-sub">Not approved</div>
+        </div>
+        <div class="stat-value">@rejected</div>
+    </div>
+</div>
+
+<!-- Expenses Table -->
+<div class="sc">
+    <div class="sc-head">
+        <h6 class="sc-title"><i class="bi bi-list-ul"></i> My Expenses</h6>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <div class="search-box">
+                <i class="bi bi-search"></i>
+                <input type="text" id="tableSearch" placeholder="Search expenses…" />
+            </div>
+            <button type="button" class="btn-main" data-bs-toggle="modal" data-bs-target="#expenseModal">
+                <i class="bi bi-plus-lg"></i> New Expense
+            </button>
+        </div>
+    </div>
+    <div style="overflow-x:auto">
+        <table class="ex-table" id="expTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Vehicle</th>
+                    <th>Status</th>
+                    <th style="text-align:right">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.MyExpenses != null && Model.MyExpenses.Any())
+                {
+                    @foreach (var expense in Model.MyExpenses)
+                    {
+                        <tr>
+                            <td style="color:var(--muted);font-size:0.8rem;white-space:nowrap">@expense.ExpenseDate.ToString("MMM dd, yyyy")</td>
+                            <td><span class="type-chip">@expense.ExpenseType</span></td>
+                            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@(expense.Description ?? "—")</td>
+                            <td class="amt">&#8369;@expense.Amount.ToString("N2")</td>
+                            <td style="font-size:0.8rem;color:var(--muted)">@(string.IsNullOrEmpty(expense.PlateNumber) ? "—" : expense.PlateNumber)</td>
+                            <td>
+                                @if (expense.Status == "Reimbursed")
+                                {
+                                    <span class="st st-ok"><i class="bi bi-check-circle-fill"></i> Reimbursed</span>
+                                }
+                                else if (expense.Status == "Rejected")
+                                {
+                                    <span class="st st-rej"><i class="bi bi-x-circle-fill"></i> Rejected</span>
+                                }
+                                else if (approvedSet.Contains(expense.Status))
+                                {
+                                    <span class="st st-acc"><i class="bi bi-send-check-fill"></i> Approved</span>
+                                }
+                                else
+                                {
+                                    <span class="st st-pend"><i class="bi bi-hourglass-split"></i> Pending</span>
+                                }
+                            </td>
+                            <td style="text-align:right">
+                                <button class="btn-view"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#viewExpenseModal"
+                                        data-id="@expense.Id"
+                                        data-type="@expense.ExpenseType"
+                                        data-amount="@expense.Amount.ToString("N2")"
+                                        data-date="@expense.ExpenseDate.ToString("MMM dd, yyyy")"
+                                        data-plate="@(expense.PlateNumber ?? "—")"
+                                        data-desc="@(expense.Description ?? "—")"
+                                        data-status="@expense.Status"
+                                        data-submitted="@expense.DateSubmitted.ToString("MMM dd, yyyy hh:mm tt")">
+                                    <i class="bi bi-eye"></i> View
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7">
+                            <div class="empty-box">
+                                <i class="bi bi-inbox"></i>
+                                <p class="mb-0">No expenses submitted yet. Click <strong>New Expense</strong> to get started.</p>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ══ Modal: New Expense ══ -->
+<div class="modal fade" id="expenseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content modal-card">
+            <div class="modal-hd">
+                <h6 class="modal-hd-title"><i class="bi bi-plus-circle-fill"></i> Submit New Expense</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form asp-controller="Employee"
+                      asp-action="Submit_Expense"
+                      method="post"
+                      enctype="multipart/form-data"
+                      id="expenseForm">
+                    @Html.AntiForgeryToken()
+                    <div class="form-section-label">Expense Details</div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="field-label">Expense Type <span>*</span></label>
+                            <select name="ExpenseType" class="form-input" required>
+                                <option value="">— Select type —</option>
+                                <option value="Fuel">⛽ Fuel / Gasoline</option>
+                                <option value="Toll">🛣️ Toll / Parking</option>
+                                <option value="Maintenance">🔧 Vehicle Maintenance</option>
+                                <option value="Meals">🍽️ Meals / Entertainment</option>
+                                <option value="Travel">✈️ Travel / Accommodation</option>
+                                <option value="Supplies">📦 Office / Fleet Supplies</option>
+                                <option value="Other">📎 Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="field-label">Amount <span>*</span></label>
+                            <div class="input-prefix">
+                                <span class="input-prefix-text">₱</span>
+                                <input name="Amount" type="number" step="0.01" min="0.01" required id="amountInput" placeholder="0.00" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="field-label">Expense Date <span>*</span></label>
+                            <input name="ExpenseDate" id="expenseDateInput" type="date" class="form-input"
+                                   value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="field-label">Vehicle</label>
+                            <select name="PlateNumber" id="vehicleSelect" class="form-input">
+                                <option value="">— No vehicle —</option>
+                                @foreach (var v in Model.Vehicles)
+                                {
+                                    var booked = Model.BookedDates.TryGetValue(v.PlateNumber, out var d)
+                                    ? string.Join(",", d) : "";
+                                    var label = v.PlateNumber + (string.IsNullOrEmpty(v.Type) ? "" : " - " + v.Type);
+                                    <option value="@v.PlateNumber" data-booked="@booked" data-label="@label">@label</option>
+                                }
+                            </select>
+                            <div class="form-hint">A vehicle can only be used once per day.</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="field-label">Description <span>*</span></label>
+                            <textarea name="Description" class="form-input" rows="3" required
+                                      placeholder="e.g. Fuel refill for service trip to Makati…"
+                                      style="resize:vertical"></textarea>
+                        </div>
+                    </div>
+                    <div class="form-section-label">Attachments</div>
+                    <div class="file-zone" id="fileZone">
+                        <input name="ReceiptFiles" type="file" multiple accept="image/*,.pdf" id="receiptFiles" />
+                        <i class="bi bi-cloud-arrow-up"></i>
+                        <p><strong>Click to upload</strong> or drag &amp; drop</p>
+                        <p style="font-size:0.72rem;margin-top:3px">Images or PDF · Max ~10 MB total</p>
+                        <div class="file-names" id="fileNames"></div>
+                    </div>
+
+                    <div class="modal-ft" style="border-top:none; padding:1.5rem 0 0; margin-top:1rem;">
+                        <button type="button" class="btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn-submit"><i class="bi bi-send-fill"></i> Submit Expense</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ Modal: View Expense ══ -->
+<div class="modal fade" id="viewExpenseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:440px">
+        <div class="modal-content modal-card">
+            <div class="modal-hd">
+                <h6 class="modal-hd-title"><i class="bi bi-receipt"></i> Expense Details</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div style="text-align:center;padding:.5rem 0 1.25rem;border-bottom:1px solid var(--border);margin-bottom:1.25rem">
+                    <div style="font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:4px">Total Amount</div>
+                    <div class="detail-amount-val" id="detail-amount"></div>
+                    <div id="detail-status-hero" style="margin-top:8px"></div>
+                </div>
+                <div class="detail-grid">
+                    <div class="detail-dt">Type</div>
+                    <div class="detail-dd" id="detail-type"></div>
+                    <div class="detail-dt">Date</div>
+                    <div class="detail-dd" id="detail-date"></div>
+                    <div class="detail-dt">Vehicle</div>
+                    <div class="detail-dd" id="detail-plate"></div>
+                    <div class="detail-dt">Description</div>
+                    <div class="detail-dd" id="detail-desc"></div>
+                    <div class="detail-dt">Submitted</div>
+                    <div class="detail-dd" id="detail-submitted" style="font-size:.78rem;color:var(--muted)"></div>
+                </div>
+            </div>
+            <div class="modal-ft">
+                <button type="button" class="btn-cancel" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // ── Disable vehicles already used on the selected date
+        function refreshVehicleOptions() {
+            const dateEl = document.getElementById('expenseDateInput');
+            const select = document.getElementById('vehicleSelect');
+            if (!dateEl || !select) return;
+            const date = dateEl.value;
+            Array.from(select.options).forEach(opt => {
+                if (!opt.value) return;
+                const booked = (opt.dataset.booked || '').split(',').filter(Boolean);
+                const used = booked.includes(date);
+                opt.disabled = used;
+                opt.textContent = opt.dataset.label + (used ? '  (already used this day)' : '');
+                if (used && select.value === opt.value) select.value = '';
+            });
+        }
+        document.getElementById('expenseDateInput')?.addEventListener('change', refreshVehicleOptions);
+        document.getElementById('expenseModal')?.addEventListener('shown.bs.modal', refreshVehicleOptions);
+        refreshVehicleOptions();
+
+        // ── Amount validation
+        document.getElementById('expenseForm')?.addEventListener('submit', function (e) {
+            const amt = parseFloat(document.getElementById('amountInput').value);
+            if (isNaN(amt) || amt <= 0) {
+                e.preventDefault();
+                document.getElementById('amountInput').focus();
+                document.getElementById('amountInput').style.borderColor = '#ef4444';
+            }
+        });
+        // ── Reset form on close
+        document.getElementById('expenseModal')?.addEventListener('hidden.bs.modal', function () {
+            document.getElementById('expenseForm').reset();
+            document.getElementById('fileNames').textContent = '';
+            refreshVehicleOptions();
+        });
+        // ── File zone label
+        document.getElementById('receiptFiles')?.addEventListener('change', function () {
+            const names = Array.from(this.files).map(f => f.name).join(', ');
+            document.getElementById('fileNames').textContent = names || '';
+        });
+        // ── Drag-over highlight
+        const fz = document.getElementById('fileZone');
+        if (fz) {
+            fz.addEventListener('dragover', e => { e.preventDefault(); fz.classList.add('drag-over'); });
+            fz.addEventListener('dragleave', () => fz.classList.remove('drag-over'));
+            fz.addEventListener('drop', () => fz.classList.remove('drag-over'));
+        }
+        // ── Populate view modal
+        document.getElementById('viewExpenseModal')?.addEventListener('show.bs.modal', function (e) {
+            const btn = e.relatedTarget;
+            document.getElementById('detail-type').textContent = btn.dataset.type;
+            document.getElementById('detail-amount').textContent = '₱ ' + btn.dataset.amount;
+            document.getElementById('detail-date').textContent = btn.dataset.date;
+            document.getElementById('detail-plate').textContent = btn.dataset.plate;
+            document.getElementById('detail-desc').textContent = btn.dataset.desc;
+            document.getElementById('detail-submitted').textContent = btn.dataset.submitted;
+
+            const raw = btn.dataset.status;
+            let cls = 'st-pend', icon = 'hourglass-split', label = 'Pending';
+            if (raw === 'Reimbursed') { cls = 'st-ok'; icon = 'check-circle-fill'; label = 'Reimbursed'; }
+            else if (raw === 'Rejected') { cls = 'st-rej'; icon = 'x-circle-fill'; label = 'Rejected'; }
+            else if (['Approved', 'DepartmentApproved', 'ForAccounting'].includes(raw)) { cls = 'st-acc'; icon = 'send-check-fill'; label = 'Approved'; }
+
+            document.getElementById('detail-status-hero').innerHTML =
+                `<span class="st ${cls}"><i class="bi bi-${icon}"></i> ${label}</span>`;
+        });
+        // ── Table search
+        document.getElementById('tableSearch')?.addEventListener('input', function () {
+            const q = this.value.toLowerCase();
+            document.querySelectorAll('#expTable tbody tr').forEach(row => {
+                row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+            });
+        });
+    </script>
+}

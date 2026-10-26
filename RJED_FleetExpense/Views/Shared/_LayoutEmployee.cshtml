@@ -1,0 +1,562 @@
+﻿@{
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var userName = User.FindFirst("FullName")?.Value
+                ?? User.Identity?.Name ?? "Employee";
+    var userInitial = userName.Length > 0 ? userName[0].ToString().ToUpper() : "E";
+
+    bool IsActive(string action) =>
+        currentController == "EmployeeDashboard" && currentAction == action;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - RJED Fleet Expense</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Familjen+Grotesk:wght@700;800&display=swap" rel="stylesheet" />
+    <!-- Site CSS -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/RJED_FleetExpense.styles.css" asp-append-version="true" />
+
+    <style>
+        :root {
+            --emp-dark: #14294f;
+            --emp-hover: #1e3c72;
+            --emp-green: #4caf50;
+            --emp-green-bg: rgba(76,175,80,0.12);
+            --ink: #0f1623;
+            --ink-2: #1e2a40;
+            --slate: #f4f6fb;
+            --border: #e4e9f3;
+            --card: #ffffff;
+            --text: #1a2035;
+            --muted: #7b8aaa;
+            --sb-bg: #14294f;
+            --sb-hover: #1e3c72;
+            --sb-border: rgba(255,255,255,0.06);
+            --sb-text: rgba(255,255,255,0.60);
+            --sb-hi: #ffffff;
+            --accent: #4caf50;
+            --accent-bg: rgba(76,175,80,0.12);
+            --green: #10b981;
+            --red: #ef4444;
+            --amber: #f59e0b;
+            --sidebar-w: 236px;
+            --topbar-h: 62px;
+            --radius: 10px;
+            --radius-sm: 6px;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            background: var(--slate);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-w);
+            height: 100vh;
+            background: var(--sb-bg);
+            display: flex;
+            flex-direction: column;
+            z-index: 1040;
+            overflow-y: auto;
+            scrollbar-width: none;
+            box-shadow: 2px 0 12px rgba(0,0,0,0.18);
+        }
+
+            .sidebar::-webkit-scrollbar {
+                display: none;
+            }
+
+        .sb-brand {
+            padding: 1.35rem 1.2rem 1.1rem;
+            border-bottom: 1px solid var(--sb-border);
+        }
+
+        .sb-brand-name {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1rem;
+            color: #fff;
+            letter-spacing: -0.3px;
+            line-height: 1.25;
+        }
+
+        .sb-brand-sub {
+            font-size: 0.68rem;
+            color: rgba(255,255,255,0.28);
+            margin-top: 2px;
+        }
+
+        .sb-role-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--accent-bg);
+            border: 1px solid rgba(76,175,80,0.30);
+            color: var(--accent);
+            border-radius: 20px;
+            padding: 2px 9px;
+            font-size: 0.64rem;
+            font-weight: 700;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            margin-top: 9px;
+        }
+
+        .sb-user {
+            padding: 0.75rem 1.2rem;
+            border-bottom: 1px solid var(--sb-border);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .sb-avatar {
+            width: 33px;
+            height: 33px;
+            border-radius: 8px;
+            background: var(--emp-hover);
+            border: 2px solid var(--accent);
+            color: #fff;
+            font-size: 0.76rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .sb-user-name {
+            font-size: 0.81rem;
+            font-weight: 600;
+            color: #fff;
+            line-height: 1.2;
+        }
+
+        .sb-user-sub {
+            font-size: 0.67rem;
+            color: rgba(255,255,255,0.32);
+        }
+
+        .sb-nav {
+            flex: 1;
+            padding: 0.4rem 0.55rem;
+        }
+
+        .sb-section {
+            font-size: 0.61rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.20);
+            padding: 0.95rem 10px 0.3rem;
+        }
+
+        .sb-link {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 8px 10px;
+            border-radius: var(--radius-sm);
+            color: var(--sb-text);
+            font-size: 0.845rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background 0.15s, color 0.15s, transform 0.14s;
+            margin-bottom: 1px;
+            position: relative;
+        }
+
+            .sb-link i {
+                font-size: 0.95rem;
+                width: 17px;
+                text-align: center;
+                flex-shrink: 0;
+            }
+
+            .sb-link:hover {
+                background: var(--sb-hover);
+                color: var(--sb-hi);
+                transform: translateX(2px);
+            }
+
+            .sb-link.active {
+                background: var(--sb-hover);
+                color: #fff;
+                font-weight: 600;
+            }
+
+                .sb-link.active::before {
+                    content: '';
+                    position: absolute;
+                    left: 0;
+                    top: 18%;
+                    bottom: 18%;
+                    width: 3px;
+                    background: var(--accent);
+                    border-radius: 0 3px 3px 0;
+                }
+
+        .sb-bottom {
+            padding: 0.55rem;
+            border-top: 1px solid var(--sb-border);
+        }
+
+        .sb-divider {
+            border-color: var(--sb-border);
+            margin: 4px 0;
+        }
+
+        .sb-logout {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: var(--radius-sm);
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.48);
+            font-size: 0.845rem;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: background 0.15s, color 0.15s;
+        }
+
+            .sb-logout:hover {
+                background: #7f1d1d;
+                color: #fff;
+            }
+
+        /* ── Main wrap ── */
+        .main-wrap {
+            margin-left: var(--sidebar-w);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Topbar ── */
+        .topbar {
+            height: var(--topbar-h);
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 900;
+        }
+
+        .topbar-title {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1.2;
+        }
+
+        .topbar-sub {
+            font-size: 0.73rem;
+            color: var(--muted);
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+        }
+
+        .tb-btn {
+            width: 35px;
+            height: 35px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.14s;
+            font-size: 0.95rem;
+            text-decoration: none;
+        }
+
+            .tb-btn:hover {
+                background: var(--slate);
+                color: var(--ink);
+            }
+
+        .tb-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 8px;
+            background: var(--emp-dark);
+            color: #fff;
+            font-size: 0.76rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ── Flash bars ── */
+        .flash-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.7rem 1.1rem;
+            font-size: 0.855rem;
+            border-radius: var(--radius-sm);
+            margin: 0.85rem 2rem 0;
+        }
+
+        .flash-success {
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            color: #065f46;
+        }
+
+        .flash-warning {
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            color: #9a3412;
+        }
+
+        .flash-error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+
+        /* ── Page body ── */
+        .page-body {
+            flex: 1;
+            padding: 1.75rem 2rem;
+        }
+
+        /* ── Mobile sidebar toggle ── */
+        .sb-toggle {
+            display: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--muted);
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.1rem;
+            margin-right: 0.5rem;
+        }
+
+        @@media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.24s ease;
+            }
+
+                .sidebar.open {
+                    transform: translateX(0);
+                }
+
+            .main-wrap {
+                margin-left: 0;
+            }
+
+            .sb-toggle {
+                display: flex;
+            }
+
+            .page-body {
+                padding: 1.2rem;
+            }
+
+            .topbar {
+                padding: 0 1.2rem;
+            }
+
+            .sb-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.42);
+                z-index: 1039;
+            }
+
+                .sb-overlay.show {
+                    display: block;
+                }
+
+            .flash-bar {
+                margin: 0.75rem 1.2rem 0;
+            }
+        }
+
+        @@media (max-width: 540px) {
+            .topbar-sub {
+                display: none;
+            }
+        }
+    </style>
+
+    @RenderSection("Styles", required: false)
+</head>
+<body>
+
+    <div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+
+        <div class="sb-brand">
+            <div class="sb-brand-name">RJED Fleet Expense</div>
+            <div class="sb-brand-sub">Management System</div>
+            <span class="sb-role-pill">
+                <i class="bi bi-person-fill"></i> Employee
+            </span>
+        </div>
+
+        <div class="sb-user">
+            <div class="sb-avatar">@userInitial</div>
+            <div>
+                <div class="sb-user-name">@userName</div>
+                <div class="sb-user-sub">Employee Portal</div>
+            </div>
+        </div>
+
+        <div class="sb-nav">
+
+            <!-- OVERVIEW -->
+            <div class="sb-section">Overview</div>
+            <a class="sb-link @(IsActive("Dashboard") ? "active" : "")"
+               asp-controller="Employee" asp-action="Dashboard">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+
+            <!-- EXPENSES -->
+            <div class="sb-section">Expenses</div>
+            <a class="sb-link @(IsActive("Submit_Expense") ? "active" : "")"
+               asp-controller="Employee" asp-action="Submit_Expense">
+                <i class="bi bi-plus-circle"></i> Submit Expense
+            </a>
+            <a class="sb-link @(IsActive("Reimbursement_Status") ? "active" : "")"
+               asp-controller="Employee" asp-action="Reimbursement_Status">
+                <i class="bi bi-arrow-repeat"></i> Reimbursement Status
+            </a>
+
+            <!-- ACCOUNT -->
+            <div class="sb-section">Account</div>
+            <a class="sb-link @(IsActive("Profile") ? "active" : "")"
+               asp-controller="Employee" asp-action="Profile">
+                <i class="bi bi-person-circle"></i> My Profile
+            </a>
+
+        </div>
+
+        <div class="sb-bottom">
+            <hr class="sb-divider" />
+            <form method="post" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="/Identity/Account/Login">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="sb-logout">
+                    <i class="bi bi-box-arrow-left"></i> Logout
+                </button>
+            </form>
+        </div>
+
+    </nav>
+
+    <div class="main-wrap">
+
+        <!-- Topbar -->
+        <header class="topbar">
+            <div style="display:flex;align-items:center">
+                <button class="sb-toggle" onclick="openSidebar()" aria-label="Open menu">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div>
+                    <div class="topbar-title">Welcome back, @userName 👋</div>
+                    <div class="topbar-sub">@DateTime.Now.ToString("dddd, MMMM dd, yyyy")</div>
+                </div>
+            </div>
+            <div class="topbar-right">
+                <button class="tb-btn" title="No new notifications">
+                    <i class="bi bi-bell"></i>
+                </button>
+                <div class="tb-avatar">@userInitial</div>
+            </div>
+        </header>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="flash-bar flash-success">
+                <i class="bi bi-check-circle-fill"></i> @TempData["Success"]
+            </div>
+        }
+        @if (TempData["Warning"] != null)
+        {
+            <div class="flash-bar flash-warning">
+                <i class="bi bi-exclamation-triangle-fill"></i> @TempData["Warning"]
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="flash-bar flash-error">
+                <i class="bi bi-x-circle-fill"></i> @TempData["Error"]
+            </div>
+        }
+
+        <main class="page-body">
+            <div class="container-fluid px-0">
+                @RenderBody()
+            </div>
+        </main>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        function openSidebar() {
+            document.getElementById('sidebar').classList.add('open');
+            document.getElementById('sbOverlay').classList.add('show');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sbOverlay').classList.remove('show');
+        }
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+
+</body>
+</html>

@@ -1,0 +1,851 @@
+﻿@model IEnumerable<RJED_FleetExpense.Models.Expense>
+@{
+    ViewData["Title"] = "Expense Reports";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var expenses = Model?.ToList() ?? new List<RJED_FleetExpense.Models.Expense>();
+
+    string report = ViewBag.Report as string ?? "all";
+    var rows = ViewBag.ReportRows as List<RJED_FleetExpense.Models.ExpenseGroupRow>;
+    var buckets = ViewBag.AgingBuckets as List<RJED_FleetExpense.Models.ExpenseGroupRow>;
+    string groupLabel = ViewBag.GroupLabel as string ?? "";
+    var departments = ViewBag.Departments as List<string> ?? new List<string>();
+
+    var chartLabels = ViewBag.ChartLabels as List<string> ?? new List<string>();
+    var chartTotals = ViewBag.ChartTotals as List<decimal> ?? new List<decimal>();
+    var chartApproved = ViewBag.ChartApproved as List<decimal> ?? new List<decimal>();
+
+    decimal totalApprovedAmt = ViewBag.TotalApproved ?? 0m;
+    decimal totalPendingAmt = ViewBag.TotalPending ?? 0m;
+    decimal totalRejectedAmt = ViewBag.TotalRejected ?? 0m;
+    decimal grandTotal = totalApprovedAmt + totalPendingAmt + totalRejectedAmt;
+
+    string selStatus = ViewBag.Status as string ?? "";
+    string selDept = ViewBag.Department as string ?? "";
+    bool hasFilters = !string.IsNullOrEmpty(ViewBag.Search as string)
+                   || !string.IsNullOrEmpty(selStatus)
+                   || !string.IsNullOrEmpty(selDept)
+                   || !string.IsNullOrEmpty(ViewBag.DateFrom as string)
+                   || !string.IsNullOrEmpty(ViewBag.DateTo as string);
+
+    var reports = new (string Key, string Title, string Icon, string Desc)[]
+    {
+        ("all",        "All Expenses",   "bi-list-ul",           "Every submitted expense with the monthly trend."),
+        ("department", "By Department",  "bi-building",          "Spend and approval rate per department."),
+        ("employee",   "By Employee",    "bi-person-lines-fill", "Who is spending the most, and how often they're approved."),
+        ("type",       "By Expense Type","bi-tags",              "Fuel, maintenance, toll and other categories ranked by spend."),
+        ("vehicle",    "By Vehicle",     "bi-truck",             "Cost per plate number to spot expensive vehicles."),
+        ("aging",      "Pending Aging",  "bi-hourglass-split",   "Pending expenses grouped by how long they've been waiting.")
+    };
+    var current = reports.First(r => r.Key == report);
+
+    string TabUrl(string r) => Url.Action("Expenses", "Dashboard", new
+    {
+        report = r,
+        search = ViewBag.Search as string,
+        status = selStatus,
+        department = selDept,
+        dateFrom = ViewBag.DateFrom as string,
+        dateTo = ViewBag.DateTo as string
+    })!;
+
+    string ExportUrl() => Url.Action("Expenses", "Dashboard", new
+    {
+        report,
+        search = ViewBag.Search as string,
+        status = selStatus,
+        department = selDept,
+        dateFrom = ViewBag.DateFrom as string,
+        dateTo = ViewBag.DateTo as string,
+        export = "csv"
+    })!;
+
+    string? DrillUrl(string label)
+    {
+        if (label is "No Department" or "No plate" or "Unknown" or "Unspecified") return null;
+        return Url.Action("Expenses", "Dashboard", new
+        {
+            report = "all",
+            search = report == "department" ? null : label,
+            department = report == "department" ? label : selDept,
+            status = selStatus,
+            dateFrom = ViewBag.DateFrom as string,
+            dateTo = ViewBag.DateTo as string
+        });
+    }
+
+    var topRows = rows?.Take(8).ToList() ?? new List<RJED_FleetExpense.Models.ExpenseGroupRow>();
+
+    // Chart mode + data (serialized here so the script block stays plain JavaScript)
+    string chartMode = report == "all" ? "line" : (rows != null && rows.Any() ? "bar" : "none");
+    string jsLabels = System.Text.Json.JsonSerializer.Serialize(chartLabels);
+    string jsTotals = System.Text.Json.JsonSerializer.Serialize(chartTotals);
+    string jsApproved = System.Text.Json.JsonSerializer.Serialize(chartApproved);
+    string jsGroupLabels = System.Text.Json.JsonSerializer.Serialize(topRows.Select(r => r.Label));
+    string jsGroupApproved = System.Text.Json.JsonSerializer.Serialize(topRows.Select(r => r.Approved));
+    string jsGroupPending = System.Text.Json.JsonSerializer.Serialize(topRows.Select(r => r.Pending));
+    string jsGroupRejected = System.Text.Json.JsonSerializer.Serialize(topRows.Select(r => r.Rejected));
+
+    string emptyMessage = report == "aging"
+        ? "Nothing is waiting for approval."
+        : (hasFilters ? "No expenses match your filters." : "No expenses have been submitted yet.");
+}
+
+@section Styles {
+    <style>
+        .exp-page {
+            --navy: #14294f;
+            --green: #4caf50;
+            --card: #ffffff;
+            --border: #e6e9f2;
+            --muted: #6c757d;
+            --text: #343a40;
+        }
+
+        /* Report tabs */
+        .report-tabs {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.9rem;
+        }
+
+        .report-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 10px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+            .report-tab:hover {
+                color: var(--navy);
+                border-color: #c8d6e5;
+            }
+
+            .report-tab.active {
+                background: var(--navy);
+                border-color: var(--navy);
+                color: #fff;
+                box-shadow: 0 4px 12px rgba(20,41,79,0.18);
+            }
+
+        .report-desc {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-export {
+            background: #fff;
+            color: var(--navy);
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 7px 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+            .btn-export:hover {
+                background: var(--navy);
+                color: #fff;
+                border-color: var(--navy);
+            }
+
+        /* Section card */
+        .section-card {
+            background: var(--card);
+            border-radius: 14px;
+            box-shadow: 0 2px 12px rgba(20,41,79,0.06);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-card-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+            .section-card-header h6 {
+                font-size: 1rem;
+                font-weight: 700;
+                color: var(--navy);
+                margin: 0;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+        .chart-wrap {
+            padding: 1.25rem 1.5rem;
+            height: 290px;
+        }
+
+        /* Filters */
+        .filter-bar {
+            display: flex;
+            gap: 0.6rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-wrap {
+            position: relative;
+        }
+
+            .search-wrap i {
+                position: absolute;
+                left: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--muted);
+                font-size: 0.85rem;
+            }
+
+        .filter-input, .filter-select {
+            padding: 7px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            background: #fff;
+            color: var(--text);
+        }
+
+        .search-input {
+            padding-left: 30px;
+            width: 220px;
+        }
+
+        .filter-input:focus, .filter-select:focus {
+            outline: none;
+            border-color: var(--navy);
+            box-shadow: 0 0 0 3px rgba(20,41,79,0.1);
+        }
+
+        .btn-filter {
+            background: var(--navy);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 7px 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+
+            .btn-filter:hover {
+                background: #1e3c72;
+            }
+
+        .btn-clear {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-decoration: none;
+            padding: 7px 8px;
+        }
+
+            .btn-clear:hover {
+                color: var(--navy);
+            }
+
+        /* Tables */
+        .exp-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .exp-table thead th {
+                background: var(--navy);
+                color: rgba(255,255,255,0.85);
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                letter-spacing: .6px;
+                font-weight: 600;
+                padding: 0.85rem 1.1rem;
+                text-align: left;
+                white-space: nowrap;
+            }
+
+            .exp-table tbody td, .exp-table tfoot td {
+                padding: 0.85rem 1.1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: 0.88rem;
+                color: var(--text);
+                vertical-align: middle;
+            }
+
+            .exp-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .exp-table tbody tr:hover {
+                background: #f5f8ff;
+            }
+
+            .exp-table tfoot td {
+                background: #f8f9fa;
+                font-weight: 700;
+                color: var(--navy);
+                border-top: 2px solid var(--border);
+                border-bottom: none;
+            }
+
+        .expense-id {
+            font-weight: 600;
+            color: var(--navy);
+            font-family: "Consolas", monospace;
+            white-space: nowrap;
+        }
+
+        .emp-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+        }
+
+        .emp-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #e8edf7;
+            color: var(--navy);
+            font-weight: 700;
+            font-size: 0.78rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .emp-name {
+            font-weight: 600;
+        }
+
+        .type-chip {
+            display: inline-block;
+            background: #eef0f8;
+            color: var(--navy);
+            padding: 2px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .plate {
+            font-family: "Consolas", monospace;
+            font-size: 0.82rem;
+        }
+
+        .desc-cell {
+            max-width: 220px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--muted);
+        }
+
+        .amount {
+            font-weight: 700;
+            color: var(--navy);
+            white-space: nowrap;
+        }
+
+        .badge-approved, .badge-pending, .badge-rejected, .badge-other {
+            display: inline-block;
+            padding: 3px 11px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-approved {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .badge-pending {
+            background: #fff8e1;
+            color: #f57f17;
+        }
+
+        .badge-rejected {
+            background: #fce4ec;
+            color: #c62828;
+        }
+
+        .badge-other {
+            background: #eceff1;
+            color: #546e7a;
+        }
+
+        /* Aging badges */
+        .age-ok {
+            background: #eceff1;
+            color: #546e7a;
+        }
+
+        .age-warn {
+            background: #fff8e1;
+            color: #f57f17;
+        }
+
+        .age-late {
+            background: #fce4ec;
+            color: #c62828;
+        }
+
+        /* Status mix bar */
+        .mix-track {
+            display: flex;
+            height: 8px;
+            width: 160px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: var(--border);
+        }
+
+            .mix-track span {
+                display: block;
+                height: 100%;
+            }
+
+        .rate-text {
+            font-size: 0.72rem;
+            color: var(--muted);
+            margin-top: 3px;
+        }
+
+        .btn-drill {
+            background: #e8f0fe;
+            color: #1a56db;
+            border-radius: 6px;
+            padding: 0.3rem 0.75rem;
+            font-size: 0.82rem;
+            font-weight: 500;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+            .btn-drill:hover {
+                background: #1a56db;
+                color: #fff;
+            }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--muted);
+        }
+
+            .empty-state i {
+                font-size: 2.5rem;
+                display: block;
+                margin-bottom: 0.75rem;
+                opacity: 0.4;
+            }
+
+        @@media (max-width: 575px) {
+            .search-input {
+                width: 100%;
+            }
+        }
+    </style>
+}
+
+<div class="exp-page">
+
+    <!-- Page Title -->
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+        <div>
+            <h4 class="fw-bold mb-0" style="color:var(--navy)">Expense Reports</h4>
+            <small class="text-muted">Super Admin view &middot; @DateTime.Now.ToString("dddd, MMMM dd, yyyy")</small>
+        </div>
+        <a href="@ExportUrl()" class="btn-export"><i class="bi bi-download"></i> Export CSV</a>
+    </div>
+
+    <!-- Report type tabs -->
+    <div class="report-tabs">
+        @foreach (var r in reports)
+        {
+            <a href="@TabUrl(r.Key)" class="report-tab @(r.Key == report ? "active" : "")">
+                <i class="bi @r.Icon"></i> @r.Title
+            </a>
+        }
+    </div>
+    <div class="report-desc"><i class="bi bi-info-circle me-1"></i>@current.Desc</div>
+
+    <!-- Stat Cards -->
+    @if (report == "aging" && buckets != null)
+    {
+        var bucketStyles = new[]
+        {
+        ("#1976d2", "#e3f2fd", "#1565c0", "bi-clock"),
+        ("#4caf50", "#e8f5e9", "#2e7d32", "bi-clock-history"),
+        ("#ff9800", "#fff3e0", "#ef6c00", "bi-exclamation-triangle"),
+        ("#e53935", "#fce4ec", "#c62828", "bi-exclamation-octagon")
+        };
+        <div class="stat-grid">
+            @for (var i = 0; i < buckets.Count; i++)
+            {
+                var b = buckets[i];
+                var st = bucketStyles[i];
+                <div class="stat-card" style="border-top-color:@st.Item1;">
+                    <div class="stat-icon" style="background:@st.Item2;color:@st.Item3"><i class="bi @st.Item4"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">@b.Label</div>
+                        <div class="stat-sub">&#8369;@b.Total.ToString("N2")</div>
+                    </div>
+                    <div class="stat-value">@b.Count</div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="stat-grid">
+            <div class="stat-card" style="border-top-color:#ff9800;">
+                <div class="stat-icon" style="background:#fff3e0;color:#ef6c00"><i class="bi bi-hourglass-split"></i></div>
+                <div class="stat-info">
+                    <div class="stat-label">Pending</div>
+                    <div class="stat-sub">&#8369;@totalPendingAmt.ToString("N2")</div>
+                </div>
+                <div class="stat-value">@(ViewBag.PendingCount ?? 0)</div>
+            </div>
+            <div class="stat-card" style="border-top-color:var(--accent);">
+                <div class="stat-icon" style="background:#e8f5e9;color:#2e7d32"><i class="bi bi-check-circle"></i></div>
+                <div class="stat-info">
+                    <div class="stat-label">Approved</div>
+                    <div class="stat-sub">&#8369;@totalApprovedAmt.ToString("N2")</div>
+                </div>
+                <div class="stat-value">@(ViewBag.ApprovedCount ?? 0)</div>
+            </div>
+            <div class="stat-card" style="border-top-color:#e53935;">
+                <div class="stat-icon" style="background:#fce4ec;color:#c62828"><i class="bi bi-x-circle"></i></div>
+                <div class="stat-info">
+                    <div class="stat-label">Rejected</div>
+                    <div class="stat-sub">&#8369;@totalRejectedAmt.ToString("N2")</div>
+                </div>
+                <div class="stat-value">@(ViewBag.RejectedCount ?? 0)</div>
+            </div>
+            <div class="stat-card" style="border-top-color:#1976d2;">
+                <div class="stat-icon" style="background:#e3f2fd;color:#1565c0"><i class="bi bi-receipt-cutoff"></i></div>
+                <div class="stat-info">
+                    <div class="stat-label">Total Submitted</div>
+                    <div class="stat-sub">&#8369;@grandTotal.ToString("N2")</div>
+                </div>
+                <div class="stat-value">@(ViewBag.TotalSubmitted ?? 0)</div>
+            </div>
+        </div>
+    }
+
+    <!-- Chart (trend for All, stacked bars for grouped reports) -->
+    @if (chartMode != "none")
+    {
+        <div class="section-card">
+            <div class="section-card-header">
+                <h6>
+                    <i class="bi @(report == "all" ? "bi-graph-up" : "bi-bar-chart-line")"></i>
+                    @(report == "all" ? "Expense Trend" : $"Top {topRows.Count} by {groupLabel}")
+                </h6>
+                <small class="text-muted">@(report == "all" ? "Last 6 months" : "Highest spend first")</small>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="mainChart"></canvas>
+            </div>
+        </div>
+    }
+
+    <!-- Report body -->
+    <div class="section-card">
+        <div class="section-card-header">
+            <h6><i class="bi @current.Icon"></i> @current.Title</h6>
+
+            <form method="get" action="@Url.Action("Expenses", "Dashboard")" class="filter-bar">
+                <input type="hidden" name="report" value="@report" />
+                <div class="search-wrap">
+                    <i class="bi bi-search"></i>
+                    <input type="text" name="search" class="filter-input search-input"
+                           placeholder="Search employee, plate, type..." value="@ViewBag.Search" />
+                </div>
+                <select name="department" class="filter-select">
+                    <option value="" selected="@(selDept == "")">All Departments</option>
+                    @foreach (var d in departments)
+                    {
+                        <option value="@d" selected="@(selDept == d)">@d</option>
+                    }
+                </select>
+                @if (report != "aging")
+                {
+                    <select name="status" class="filter-select">
+                        <option value="" selected="@(selStatus == "")">All Status</option>
+                        <option value="Pending" selected="@(selStatus == "Pending")">Pending</option>
+                        <option value="Approved" selected="@(selStatus == "Approved")">Approved</option>
+                        <option value="Rejected" selected="@(selStatus == "Rejected")">Rejected</option>
+                    </select>
+                }
+                <input type="date" name="dateFrom" class="filter-input" value="@ViewBag.DateFrom" title="From date" />
+                <input type="date" name="dateTo" class="filter-input" value="@ViewBag.DateTo" title="To date" />
+                <button type="submit" class="btn-filter"><i class="bi bi-funnel"></i> Filter</button>
+                @if (hasFilters)
+                {
+                    <a href="@Url.Action("Expenses", "Dashboard", new { report })" class="btn-clear">Clear</a>
+                }
+            </form>
+        </div>
+
+        @if (rows != null)
+        {
+            @* ───── GROUPED REPORT TABLE ───── *@
+            if (rows.Any())
+            {
+                <div class="table-responsive">
+                    <table class="exp-table">
+                        <thead>
+                            <tr>
+                                <th>@groupLabel</th>
+                                <th>Expenses</th>
+                                <th>Total</th>
+                                <th>Approved</th>
+                                <th>Pending</th>
+                                <th>Rejected</th>
+                                <th>Status Mix</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in rows)
+                            {
+                                var aPct = r.Total > 0 ? (double)(r.Approved / r.Total * 100) : 0;
+                                var pPct = r.Total > 0 ? (double)(r.Pending / r.Total * 100) : 0;
+                                var rPct = r.Total > 0 ? (double)(r.Rejected / r.Total * 100) : 0;
+                                var drill = DrillUrl(r.Label);
+                                <tr>
+                                    <td>
+                                        @if (report == "employee")
+                                        {
+                                            <div class="emp-cell">
+                                                <span class="emp-avatar">@(r.Label.Trim().Substring(0, 1).ToUpper())</span>
+                                                <div>
+                                                    <div class="emp-name">@r.Label</div>
+                                                    <small class="text-muted">@(r.Sub ?? "No Department")</small>
+                                                </div>
+                                            </div>
+                                        }
+                                        else if (report == "vehicle")
+                                        {
+                                            <span class="plate fw-bold">@r.Label</span>
+                                        }
+                                        else if (report == "type")
+                                        {
+                                            <span class="type-chip">@r.Label</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="emp-name">@r.Label</span>
+                                        }
+                                    </td>
+                                    <td>@r.Count</td>
+                                    <td class="amount">&#8369;@r.Total.ToString("N2")</td>
+                                    <td>&#8369;@r.Approved.ToString("N2")</td>
+                                    <td>&#8369;@r.Pending.ToString("N2")</td>
+                                    <td>&#8369;@r.Rejected.ToString("N2")</td>
+                                    <td>
+                                        <div class="mix-track" title="Approved / Pending / Rejected by amount">
+                                            <span style="width:@aPct.ToString("F1")%;background:#4caf50;"></span>
+                                            <span style="width:@pPct.ToString("F1")%;background:#ff9800;"></span>
+                                            <span style="width:@rPct.ToString("F1")%;background:#e53935;"></span>
+                                        </div>
+                                        <div class="rate-text">@r.ApprovalRate.ToString("F0")% approved</div>
+                                    </td>
+                                    <td class="text-end">
+                                        @if (drill != null)
+                                        {
+                                            <a href="@drill" class="btn-drill"><i class="bi bi-arrow-right-circle me-1"></i>Records</a>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td>Total</td>
+                                <td>@rows.Sum(x => x.Count)</td>
+                                <td>&#8369;@rows.Sum(x => x.Total).ToString("N2")</td>
+                                <td>&#8369;@rows.Sum(x => x.Approved).ToString("N2")</td>
+                                <td>&#8369;@rows.Sum(x => x.Pending).ToString("N2")</td>
+                                <td>&#8369;@rows.Sum(x => x.Rejected).ToString("N2")</td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+                    <small class="text-muted">@rows.Count group@(rows.Count == 1 ? "" : "s")</small>
+                </div>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+                    <p class="mb-0">@emptyMessage</p>
+                </div>
+            }
+        }
+        else if (expenses.Any())
+        {
+            @* ───── RECORDS TABLE (All + Aging) ───── *@
+            <div class="table-responsive">
+                <table class="exp-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Employee</th>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Plate</th>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>@(report == "aging" ? "Waiting" : "Status")</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var exp in expenses)
+                        {
+                            var name = exp.User?.FullName ?? exp.User?.Email ?? "Unknown";
+                            var initial = string.IsNullOrWhiteSpace(name) ? "?" : name.Trim().Substring(0, 1).ToUpper();
+                            var badgeClass = exp.Status == "Approved" ? "badge-approved"
+                            : exp.Status == "Pending" ? "badge-pending"
+                            : exp.Status == "Rejected" ? "badge-rejected"
+                            : "badge-other";
+                            var age = Math.Max(0, (DateTime.Today - exp.ExpenseDate.Date).Days);
+                            var ageClass = age >= 15 ? "age-late" : age >= 8 ? "age-warn" : "age-ok";
+
+                            <tr>
+                                <td class="expense-id">EXP-@exp.Id.ToString("D4")</td>
+                                <td>
+                                    <div class="emp-cell">
+                                        <span class="emp-avatar">@initial</span>
+                                        <div>
+                                            <div class="emp-name">@name</div>
+                                            <small class="text-muted">@(exp.User?.Department ?? "")</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>@exp.ExpenseDate.ToString("MMM dd, yyyy")</td>
+                                <td><span class="type-chip">@exp.ExpenseType</span></td>
+                                <td class="plate">@(string.IsNullOrWhiteSpace(exp.PlateNumber) ? "—" : exp.PlateNumber)</td>
+                                <td class="desc-cell" title="@exp.Description">@(string.IsNullOrWhiteSpace(exp.Description) ? "—" : exp.Description)</td>
+                                <td class="amount">&#8369;@exp.Amount.ToString("N2")</td>
+                                <td>
+                                    @if (report == "aging")
+                                    {
+                                        <span class="badge-other @ageClass">@age day@(age == 1 ? "" : "s")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="@badgeClass">@exp.Status</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+                <small class="text-muted">Showing @expenses.Count expense@(expenses.Count == 1 ? "" : "s")</small>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="bi bi-inbox"></i>
+                <p class="mb-0">@emptyMessage</p>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const chartMode = '@chartMode';
+        const peso = v => '₱' + Number(v).toLocaleString('en-PH', { minimumFractionDigits: 2 });
+        const baseScales = {
+            y: { beginAtZero: true, grid: { color: '#eef0f8' },
+                 ticks: { callback: v => '₱' + Number(v).toLocaleString('en-PH') } },
+            x: { grid: { display: false } }
+        };
+        const baseLegend = { position: 'bottom', labels: { usePointStyle: true, padding: 16, font: { size: 12 } } };
+        const baseTooltip = { callbacks: { label: c => c.dataset.label + ': ' + peso(c.parsed.y) } };
+        const canvas = document.getElementById('mainChart');
+
+        if (canvas && chartMode === 'line') {
+            new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: @Html.Raw(jsLabels),
+                    datasets: [
+                        { label: 'Total submitted', data: @Html.Raw(jsTotals),
+                          borderColor: '#14294f', backgroundColor: 'rgba(20,41,79,0.08)', fill: true, tension: 0.35,
+                          borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#14294f' },
+                        { label: 'Approved', data: @Html.Raw(jsApproved),
+                          borderColor: '#4caf50', backgroundColor: 'rgba(76,175,80,0.08)', fill: true, tension: 0.35,
+                          borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#4caf50' }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: baseLegend, tooltip: baseTooltip },
+                    scales: baseScales
+                }
+            });
+        }
+
+        if (canvas && chartMode === 'bar') {
+            new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: @Html.Raw(jsGroupLabels),
+                    datasets: [
+                        { label: 'Approved', data: @Html.Raw(jsGroupApproved), backgroundColor: '#4caf50', borderRadius: 4 },
+                        { label: 'Pending',  data: @Html.Raw(jsGroupPending),  backgroundColor: '#ff9800', borderRadius: 4 },
+                        { label: 'Rejected', data: @Html.Raw(jsGroupRejected), backgroundColor: '#e53935', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: baseLegend, tooltip: baseTooltip },
+                    scales: {
+                        x: { stacked: true, grid: { display: false } },
+                        y: Object.assign({}, baseScales.y, { stacked: true })
+                    }
+                }
+            });
+        }
+    </script>
+}

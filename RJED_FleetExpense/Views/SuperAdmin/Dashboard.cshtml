@@ -1,0 +1,318 @@
+﻿@{
+    ViewData["Title"] = "Super Admin Dashboard";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Styles {
+    <style>
+        .quick-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .quick-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            text-decoration: none;
+            color: var(--text);
+            transition: all 0.2s ease;
+        }
+
+            .quick-card:hover {
+                border-color: var(--accent);
+                transform: translateY(-3px);
+                box-shadow: 0 8px 20px rgba(0,0,0,0.07);
+                color: var(--text);
+            }
+
+        .quick-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.35rem;
+            flex-shrink: 0;
+        }
+
+        .section-title {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sc {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        /* Audit log list */
+        .log-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            padding: 0.9rem 1.1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.845rem;
+            transition: background 0.15s ease;
+        }
+
+            .log-item:last-child {
+                border-bottom: none;
+            }
+
+            .log-item:hover {
+                background: var(--slate);
+            }
+
+        .log-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            flex-shrink: 0;
+        }
+
+        .log-text {
+            flex: 1;
+            min-width: 0;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .log-time {
+            font-size: 0.72rem;
+            color: var(--muted);
+            white-space: nowrap;
+            margin-top: 2px;
+        }
+
+        /* System alerts */
+        .alert-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 0.9rem;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 0.7rem;
+        }
+
+            .alert-item:last-child {
+                margin-bottom: 0;
+            }
+
+            .alert-item i {
+                font-size: 1rem;
+                flex-shrink: 0;
+            }
+
+        .alert-warn {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .alert-info-soft {
+            background: #e0f2fe;
+            color: #075985;
+        }
+
+        .alert-danger-soft {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: var(--muted);
+            font-size: 0.845rem;
+        }
+
+            .empty-state i {
+                font-size: 2rem;
+                display: block;
+                margin-bottom: 0.5rem;
+                opacity: 0.4;
+            }
+    </style>
+}
+
+@{
+    var totalUsers = ViewBag.TotalUsers ?? 0;
+    var expensesThisMonth = (decimal)(ViewBag.TotalExpensesThisMonth ?? 0m);
+    var pendingApprovals = ViewBag.PendingApprovals ?? 0;
+    var activeDepartments = ViewBag.ActiveDepartments ?? 0;
+
+    // Placeholder entries - replace by setting ViewBag.AuditLogs from the controller.
+    var logs = ViewBag.AuditLogs as IEnumerable<(string Text, string Time, string Icon, string Bg, string Fg)>
+        ?? new List<(string Text, string Time, string Icon, string Bg, string Fg)>
+        {
+            ("New user 'juan.dela.cruz' registered", "10 min ago", "bi-person-plus", "#ecfdf5", "#10b981"),
+            ("Expense #EXP-0456 rejected by Supervisor", "45 min ago", "bi-x-circle", "#fef2f2", "#ef4444"),
+            ("Security policy changed", "3 hours ago", "bi-shield-lock", "#fefce8", "#ca8a04")
+        };
+}
+
+@* ── PAGE HEADER ── *@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div>
+        <h4 class="fw-bold mb-0" style="color:var(--ink)">Super Admin Dashboard</h4>
+        <small class="text-muted">System overview, user management, and global configuration</small>
+    </div>
+</div>
+
+@* ── STAT CARDS ── *@
+<div class="stat-grid">
+    <div class="stat-card" style="border-top-color:#ca8a04;">
+        <div class="stat-icon" style="background:#fefce8;color:#ca8a04;"><i class="bi bi-people-fill"></i></div>
+        <div class="stat-info">
+            <div class="stat-label">Total Users</div>
+            <div class="stat-sub">Registered</div>
+        </div>
+        <div class="stat-value">@totalUsers</div>
+    </div>
+
+    <div class="stat-card" style="border-top-color:#10b981;">
+        <div class="stat-icon" style="background:#ecfdf5;color:#10b981;"><i class="bi bi-cash-stack"></i></div>
+        <div class="stat-info">
+            <div class="stat-label">Expenses This Month</div>
+            <div class="stat-sub">@DateTime.Now.ToString("MMMM yyyy")</div>
+        </div>
+        <div class="stat-value">₱@expensesThisMonth.ToString("N0")</div>
+    </div>
+
+    <div class="stat-card" style="border-top-color:#3b82f6;">
+        <div class="stat-icon" style="background:#f0f9ff;color:#3b82f6;"><i class="bi bi-hourglass-split"></i></div>
+        <div class="stat-info">
+            <div class="stat-label">Pending Approvals</div>
+            <div class="stat-sub">Requires action</div>
+        </div>
+        <div class="stat-value">@pendingApprovals</div>
+    </div>
+
+    <div class="stat-card" style="border-top-color:#ef4444;">
+        <div class="stat-icon" style="background:#fef2f2;color:#ef4444;"><i class="bi bi-building"></i></div>
+        <div class="stat-info">
+            <div class="stat-label">Active Departments</div>
+            <div class="stat-sub">Distinct</div>
+        </div>
+        <div class="stat-value">@activeDepartments</div>
+    </div>
+</div>
+
+@* ── QUICK ACTIONS ── *@
+<div class="quick-grid">
+    <a asp-controller="Dashboard" asp-action="ManageUser" class="quick-card">
+        <div class="quick-icon" style="background:#fefce8;color:#ca8a04;">
+            <i class="bi bi-person-gear"></i>
+        </div>
+        <div>
+            <strong>Users &amp; Roles</strong><br>
+            <small class="text-muted">Add / Edit / Deactivate</small>
+        </div>
+    </a>
+
+    <a asp-controller="Dashboard" asp-action="Expenses" class="quick-card">
+        <div class="quick-icon" style="background:#ecfdf5;color:#10b981;">
+            <i class="bi bi-receipt"></i>
+        </div>
+        <div>
+            <strong>All Expenses</strong><br>
+            <small class="text-muted">View all submissions</small>
+        </div>
+    </a>
+
+    <a asp-controller="Dashboard" asp-action="AuditLogs" class="quick-card">
+        <div class="quick-icon" style="background:#f5f3ff;color:#8b5cf6;">
+            <i class="bi bi-journal-text"></i>
+        </div>
+        <div>
+            <strong>Audit Logs</strong><br>
+            <small class="text-muted">Full activity history</small>
+        </div>
+    </a>
+
+    <a asp-controller="Dashboard" asp-action="SystemSetting" class="quick-card">
+        <div class="quick-icon" style="background:#fef2f2;color:#ef4444;">
+            <i class="bi bi-shield-lock"></i>
+        </div>
+        <div>
+            <strong>System Settings</strong><br>
+            <small class="text-muted">Security &amp; configuration</small>
+        </div>
+    </a>
+</div>
+
+@* ── MAIN CONTENT ROW ── *@
+<div class="row g-4">
+
+    @* LEFT: Audit log *@
+    <div class="col-lg-8">
+        <h5 class="section-title">
+            <i class="bi bi-clock-history"></i> Recent System Activity
+        </h5>
+        <div class="sc">
+            @if (logs.Any())
+            {
+                foreach (var log in logs)
+                {
+                    <div class="log-item">
+                        <div class="log-icon" style="background:@log.Bg;color:@log.Fg;">
+                            <i class="bi @log.Icon"></i>
+                        </div>
+                        <div class="log-text">@log.Text</div>
+                        <div class="log-time">@log.Time</div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+                    No recent activity.
+                </div>
+            }
+        </div>
+    </div>
+
+    @* RIGHT: Alerts *@
+    <div class="col-lg-4">
+        <h5 class="section-title">
+            <i class="bi bi-bell"></i> System Alerts
+        </h5>
+        <div class="sc p-3">
+            <div class="alert-item alert-warn">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span>3 expenses pending &gt; 7 days</span>
+            </div>
+            <div class="alert-item alert-info-soft">
+                <i class="bi bi-info-circle-fill"></i>
+                <span>Fuel price API limit approaching</span>
+            </div>
+            <div class="alert-item alert-danger-soft">
+                <i class="bi bi-shield-exclamation"></i>
+                <span>2 users with failed login attempts</span>
+            </div>
+        </div>
+    </div>
+</div>

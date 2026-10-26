@@ -1,0 +1,333 @@
+﻿@page "/Dashboard/Index"
+@model RJED_FleetExpense.Pages.DashboardModel
+
+<div class="dashboard-container">
+    <!-- Page Header -->
+    <div class="page-header mb-5">
+        <h1 class="h2 fw-bold text-dark mb-2">Super Admin Dashboard</h1>
+        <p class="text-muted lead mb-0">System overview, user management, and global configuration</p>
+    </div>
+
+    <!-- Stats Cards Row - Fixed Height -->
+    <div class="row g-4 mb-5">
+        <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+            <div class="stat-card h-100">
+                <div class="card-body p-4 d-flex flex-column align-items-start">
+                    <div class="icon-wrapper mb-3">
+                        <div class="icon-shape bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow-lg">
+                            <i class="bi bi-people-fill fs-3"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="text-muted mb-2 fw-medium text-uppercase tracking-wide small">Total Users</h6>
+                        <h3 class="fw-bold text-dark mb-1">@ViewBag.TotalUsers</h3>
+                        <small class="text-success fw-semibold">
+                            <i class="bi bi-arrow-up-circle me-1"></i>+12% from last month
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+            <div class="stat-card h-100">
+                <div class="card-body p-4 d-flex flex-column align-items-start">
+                    <div class="icon-wrapper mb-3">
+                        <div class="icon-shape bg-success text-white rounded-circle d-flex align-items-center justify-content-center shadow-lg">
+                            <i class="bi bi-currency-dollar fs-3"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="text-muted mb-2 fw-medium text-uppercase tracking-wide small">Expenses (Month)</h6>
+                        <h3 class="fw-bold text-success mb-1">@ViewBag.TotalExpensesThisMonth?.ToString("N0")</h3>
+                        <small class="text-warning fw-semibold">
+                            <i class="bi bi-arrow-down-circle me-1"></i>₱45K avg daily
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+            <div class="stat-card h-100">
+                <div class="card-body p-4 d-flex flex-column align-items-start">
+                    <div class="icon-wrapper mb-3">
+                        <div class="icon-shape bg-warning text-white rounded-circle d-flex align-items-center justify-content-center shadow-lg">
+                            <i class="bi bi-hourglass-split fs-3"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="text-muted mb-2 fw-medium text-uppercase tracking-wide small">Pending</h6>
+                        <h3 class="fw-bold text-warning mb-1">@ViewBag.PendingApprovals</h3>
+                        <small class="text-danger fw-semibold">
+                            <i class="bi bi-fire me-1"></i>12 urgent (3+ days)
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+            <div class="stat-card h-100">
+                <div class="card-body p-4 d-flex flex-column align-items-start">
+                    <div class="icon-wrapper mb-3">
+                        <div class="icon-shape bg-info text-white rounded-circle d-flex align-items-center justify-content-center shadow-lg">
+                            <i class="bi bi-building fs-3"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="text-muted mb-2 fw-medium text-uppercase tracking-wide small">Departments</h6>
+                        <h3 class="fw-bold text-info mb-1">@ViewBag.ActiveDepartments</h3>
+                        <small class="text-muted fw-semibold">
+                            <i class="bi bi-check-circle me-1"></i>8 active fleets
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Cards Row -->
+    <div class="row g-4">
+        <!-- Recent Activity -->
+        <div class="col-xl-8 col-lg-8">
+            <div class="card h-100 shadow-lg border-0 overflow-hidden">
+                <div class="card-header bg-gradient-primary text-white p-4 position-relative">
+                    <h5 class="mb-0 fw-bold d-flex align-items-center">
+                        <i class="bi bi-clock-history me-2 fs-5"></i>
+                        Recent Activity
+                    </h5>
+                    <div class="position-absolute top-0 end-0 p-3">
+                        <small class="badge bg-light text-dark">Live</small>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="activity-list">
+                        <div class="activity-item py-4 px-4 border-bottom">
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="activity-icon bg-success text-white rounded-circle">
+                                    <i class="bi bi-person-plus"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="fw-semibold text-dark mb-1">New user registered</div>
+                                    <small class="text-muted">'juan.dela.cruz' joined Logistics</small>
+                                    <div class="small text-success mt-1 fw-semibold">10 min ago</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="activity-item py-4 px-4 border-bottom">
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="activity-icon bg-warning text-white rounded-circle">
+                                    <i class="bi bi-x-circle"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="fw-semibold text-dark mb-1">Expense rejected</div>
+                                    <small class="text-muted">EXP-0456 by Supervisor Maria Santos</small>
+                                    <div class="small text-muted mt-1">45 min ago</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="activity-item py-4 px-4 border-bottom">
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="activity-icon bg-info text-white rounded-circle">
+                                    <i class="bi bi-gear"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="fw-semibold text-dark mb-1">Workflow updated</div>
+                                    <small class="text-muted">Fuel approval threshold changed</small>
+                                    <div class="small text-muted mt-1">2 hours ago</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="activity-item py-4 px-4">
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="activity-icon bg-secondary text-white rounded-circle">
+                                    <i class="bi bi-shield-lock"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="fw-semibold text-dark mb-1">Security policy</div>
+                                    <small class="text-muted">MFA enabled for all admins</small>
+                                    <div class="small text-muted mt-1">3 hours ago</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts -->
+        <div class="col-xl-4 col-lg-4">
+            <div class="card h-100 shadow-lg border-0 mb-4 mb-lg-0">
+                <div class="card-header bg-gradient-danger text-white p-4">
+                    <h6 class="mb-0 fw-bold d-flex align-items-center">
+                        <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                        System Alerts
+                    </h6>
+                </div>
+                <div class="card-body p-4 pt-0">
+                    <div class="alert alert-warning shadow-sm mb-3 p-3 border-0" role="alert">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-clock-history text-warning fs-4 me-3 flex-shrink-0 mt-1"></i>
+                            <div>
+                                <strong>3 expenses overdue</strong>
+                                <div class="small text-muted">Pending > 7 days</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert alert-info shadow-sm mb-3 p-3 border-0" role="alert">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-graph-down text-info fs-4 me-3 flex-shrink-0 mt-1"></i>
+                            <div>
+                                <strong>Fuel API warning</strong>
+                                <div class="small text-muted">85% quota used</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert alert-danger shadow-sm p-3 border-0" role="alert">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-shield-exclamation text-danger fs-4 me-3 flex-shrink-0 mt-1"></i>
+                            <div>
+                                <strong>Security alert</strong>
+                                <div class="small text-muted">2 failed logins detected</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        :root {
+            --primary-blue: #1e3c72;
+            --primary-blue-light: #2a5298;
+            --success-green: #4caf50;
+            --sidebar-dark: #0f1e3a;
+            --sidebar-dark-hover: #15294e;
+            --card-bg: rgba(255, 255, 255, 0.97);
+            --shadow-heavy: 0 16px 40px rgba(0, 0, 0, 0.14);
+            --shadow-light: 0 8px 25px rgba(0, 0, 0, 0.08);
+            --card-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            --card-shadow-hover: 0 20px 60px rgba(0,0,0,0.15);
+        }
+
+        .sidebar {
+            background: var(--sidebar-dark) !important;
+            border-right: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 2px 0 12px rgba(0,0,0,0.4);
+            backdrop-filter: blur(8px);
+            scrollbar-width: thin;
+        }
+
+            .sidebar .nav-link {
+                padding: 0.65rem 1rem;
+                font-size: 0.88rem;
+                color: rgba(255,255,255,0.9) !important;
+                white-space: nowrap;
+            }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background: var(--sidebar-dark-hover);
+            color: white !important;
+            border-left: 4px solid var(--success-green);
+            transform: translateX(3px);
+        }
+
+        .dashboard-container {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+
+        .page-header {
+            max-width: 1200px;
+            margin: 0 auto 3rem;
+            padding: 0 1rem;
+        }
+
+        .stat-card {
+            border: none;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            box-shadow: var(--card-shadow);
+            transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+            overflow: hidden;
+        }
+
+            .stat-card:hover {
+                transform: translateY(-8px);
+                box-shadow: var(--card-shadow-hover);
+            }
+
+        .icon-wrapper {
+            width: 64px;
+            height: 64px;
+        }
+
+        .icon-shape {
+            width: 100%;
+            height: 100%;
+            font-size: 1.25rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+        }
+
+            .icon-shape.bg-primary {
+                background: linear-gradient(135deg, #667eea, #764ba2) !important;
+            }
+
+            .icon-shape.bg-success {
+                background: linear-gradient(135deg, #11998e, #38ef7d) !important;
+            }
+
+            .icon-shape.bg-warning {
+                background: linear-gradient(135deg, #f093fb, #f5576c) !important;
+            }
+
+            .icon-shape.bg-info {
+                background: linear-gradient(135deg, #4facfe, #00f2fe) !important;
+            }
+
+        .bg-gradient-primary {
+            background: var(--primary-gradient) !important;
+            position: relative;
+        }
+
+        .bg-gradient-danger {
+            background: var(--danger-gradient) !important;
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .activity-list .border-bottom:last-child {
+            border-bottom: none !important;
+        }
+
+        .tracking-wide {
+            letter-spacing: 0.5px;
+        }
+
+        
+
+        .stat-card .card-body .icon-wrapper {
+            margin: 0 auto 1rem auto;
+        }
+
+        .stat-card .card-body > div:last-child {
+            text-align: left;
+        }
+
+        
+    </style>
+}

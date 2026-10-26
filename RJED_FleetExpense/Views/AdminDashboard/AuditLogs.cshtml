@@ -1,0 +1,391 @@
+﻿@model IEnumerable<RJED_FleetExpense.Models.AuditLog>
+
+@{
+    ViewData["Title"] = "Auditlogs";
+    Layout = "/Views/Shared/_LayoutAdmin.cshtml";
+
+    var search        = ViewBag.Search as string ?? "";
+    var actionType    = ViewBag.ActionType as string ?? "";
+    var tableAffected = ViewBag.TableAffected as string ?? "";
+    var dateFrom      = ViewBag.DateFrom as string ?? "";
+    var dateTo        = ViewBag.DateTo as string ?? "";
+    var page          = (int)(ViewBag.Page ?? 1);
+    var totalPages    = (int)(ViewBag.TotalPages ?? 1);
+    var total         = (int)(ViewBag.Total ?? 0);
+    var tables        = ViewBag.Tables as List<string> ?? new List<string>();
+    var logs          = Model ?? Enumerable.Empty<RJED_FleetExpense.Models.AuditLog>();
+}
+
+<div class="container-fluid py-4">
+
+    <!-- Page Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: var(--primary-blue);">
+                Audit Logs
+            </h2>
+            <p class="text-muted mb-0">
+                Full system activity history • User actions, changes, logins, errors
+            </p>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+            <a asp-action="AuditLogs"
+               class="btn btn-outline-secondary d-flex align-items-center gap-2">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </a>
+
+            <a asp-action="ExportAuditLogs"
+               asp-route-search="@search"
+               asp-route-actionType="@actionType"
+               asp-route-tableAffected="@tableAffected"
+               asp-route-dateFrom="@dateFrom"
+               asp-route-dateTo="@dateTo"
+               class="btn btn-outline-success d-flex align-items-center gap-2">
+                <i class="bi bi-download"></i> Export CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4 p-3">
+        <form method="get" asp-action="AuditLogs" id="searchForm">
+            <div class="row g-2 align-items-end">
+
+                <!-- Search -->
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold small text-uppercase"
+                           style="color: var(--primary-blue);">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text"
+                               name="search"
+                               id="searchInput"
+                               class="form-control border-start-0"
+                               placeholder="User, action, details..."
+                               value="@search"
+                               autocomplete="off" />
+                    </div>
+                </div>
+
+                <!-- Action Type -->
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold small text-uppercase"
+                           style="color: var(--primary-blue);">Action Type</label>
+                    <select name="actionType" class="form-select">
+                        <option value="">All Actions</option>
+                        <option value="login" selected="@(actionType == "login" ? "selected" : null)">Login</option>
+                        <option value="logout" selected="@(actionType == "logout" ? "selected" : null)">Logout</option>
+                        <option value="create" selected="@(actionType == "create" ? "selected" : null)">Create</option>
+                        <option value="update" selected="@(actionType == "update" ? "selected" : null)">Update</option>
+                        <option value="delete" selected="@(actionType == "delete" ? "selected" : null)">Delete</option>
+                        <option value="reject" selected="@(actionType == "reject" ? "selected" : null)">Reject</option>
+                    </select>
+                </div>
+
+                <!-- Table Affected -->
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold small text-uppercase"
+                           style="color: var(--primary-blue);">Table</label>
+                    <select name="tableAffected" class="form-select">
+                        <option value="">All Tables</option>
+                        @foreach (var table in tables)
+                        {
+                            <option value="@table"
+                                    selected="@(tableAffected == table ? "selected" : null)">
+                                @table
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <!-- Table Affected -->
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold small text-uppercase"
+                           style="color: var(--primary-blue);">Table</label>
+                    <select name="tableAffected" class="form-select">
+                        <option value="">All Tables</option>
+                        @foreach (var table in tables)
+                        {
+                            <option value="@table"
+                                    selected="@(tableAffected == table ? "selected" : null)">
+                                @table
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <!-- Date From -->
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold small text-uppercase"
+                           style="color: var(--primary-blue);">Date From</label>
+                    <input type="date"
+                           name="dateFrom"
+                           class="form-control"
+                           value="@dateFrom" />
+                </div>
+
+                <!-- Date To -->
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold small text-uppercase"
+                           style="color: var(--primary-blue);">Date To</label>
+                    <input type="date"
+                           name="dateTo"
+                           class="form-control"
+                           value="@dateTo" />
+                </div>
+
+                <!-- Buttons -->
+                <div class="col-md-1 d-flex gap-2">
+                    <button type="submit"
+                            class="btn btn-primary w-100"
+                            title="Apply Filters">
+                        <i class="bi bi-funnel-fill"></i>
+                    </button>
+                    <a asp-action="AuditLogs"
+                       class="btn btn-outline-secondary w-100"
+                       title="Clear Filters">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                </div>
+
+            </div>
+        </form>
+    </div>
+
+    <!-- Record Count -->
+    <div class="mb-3 text-md-end">
+        <small class="text-muted">
+            Showing <strong>@logs.Count()</strong> of <strong>@total</strong> records
+            @if (!string.IsNullOrWhiteSpace(search))
+            {
+                <span>matching "<em>@search</em>"</span>
+            }
+        </small>
+    </div>
+
+    <!-- Table -->
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>User</th>
+                            <th>Action Type</th>
+                            <th>Table Affected</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!logs.Any())
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <i class="bi bi-journal-x fs-3 d-block mb-2"></i>
+                                    No audit logs found
+                                    @(!string.IsNullOrWhiteSpace(search)
+                                        ? $" for \"{search}\"."
+                                        : ".")
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var log in logs)
+                            {
+                                <tr>
+                                    <td class="text-muted text-nowrap">
+                                        @log.Timestamp.ToLocalTime().ToString("MMM dd, yyyy HH:mm")
+                                    </td>
+                                    <td>
+                                        @(log.ApplicationUser?.Email ?? "Unknown")
+                                    </td>
+                                    <td>
+                                        <span class="badge @GetActionBadgeClass(log.ActionType)">
+                                            @log.ActionType
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(log.TableAffected))
+                                        {
+                                            <span class="badge bg-light text-dark border">
+                                                @log.TableAffected
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="text-muted">
+                                        @log.Details
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        @if (totalPages > 1)
+        {
+            <div class="card-footer bg-light text-center py-3 border-top-0">
+                <nav aria-label="Audit log pagination">
+                    <ul class="pagination pagination-sm justify-content-center mb-0">
+
+                        <li class="page-item @(page <= 1 ? "disabled" : "")">
+                            <a class="page-link"
+                               asp-action="AuditLogs"
+                               asp-route-search="@search"
+                               asp-route-actionType="@actionType"
+                               asp-route-tableAffected="@tableAffected"
+                               asp-route-dateFrom="@dateFrom"
+                               asp-route-dateTo="@dateTo"
+                               asp-route-page="@(page - 1)">
+                                Previous
+                            </a>
+                        </li>
+
+                        @for (int p = Math.Max(1, page - 2);
+                              p <= Math.Min(totalPages, page + 2);
+                              p++)
+                        {
+                            <li class="page-item @(p == page ? "active" : "")">
+                                <a class="page-link"
+                                   asp-action="AuditLogs"
+                                   asp-route-search="@search"
+                                   asp-route-actionType="@actionType"
+                                   asp-route-tableAffected="@tableAffected"
+                                   asp-route-dateFrom="@dateFrom"
+                                   asp-route-dateTo="@dateTo"
+                                   asp-route-page="@p">
+                                    @p
+                                </a>
+                            </li>
+                        }
+
+                        <li class="page-item @(page >= totalPages ? "disabled" : "")">
+                            <a class="page-link"
+                               asp-action="AuditLogs"
+                               asp-route-search="@search"
+                               asp-route-actionType="@actionType"
+                               asp-route-tableAffected="@tableAffected"
+                               asp-route-dateFrom="@dateFrom"
+                               asp-route-dateTo="@dateTo"
+                               asp-route-page="@(page + 1)">
+                                Next
+                            </a>
+                        </li>
+
+                    </ul>
+                </nav>
+            </div>
+        }
+    </div>
+</div>
+
+@functions {
+    string GetActionBadgeClass(string? action) => action?.ToLower() switch
+    {
+        var a when a != null && a.Contains("login")  => "bg-primary",
+        var a when a != null && a.Contains("logout") => "bg-secondary",
+        var a when a != null && a.Contains("create") => "bg-success",
+        var a when a != null && a.Contains("update") => "bg-info",
+        var a when a != null && a.Contains("delete") => "bg-danger",
+        var a when a != null && a.Contains("reject") => "bg-warning",
+        _ => "bg-secondary"
+    };
+}
+
+@section Styles {
+    <style>
+        :root {
+            --primary-blue: #1e3c72;
+            --primary-blue-light: #2a5298;
+            --accent-green: #28a745;
+            --warning: #fd7e14;
+            --danger: #dc3545;
+            --info: #17a2b8;
+        }
+
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+            border: 1px solid rgba(0,0,0,0.04);
+        }
+
+        h2 {
+            color: var(--primary-blue);
+            font-weight: 700;
+        }
+
+        .table-light th {
+            background-color: rgba(30, 60, 114, 0.08) !important;
+            color: var(--primary-blue);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.84rem;
+            letter-spacing: 0.6px;
+            border-bottom: 2px solid rgba(0,0,0,0.08);
+        }
+
+        .badge {
+            font-weight: 600;
+            padding: 0.45em 0.9em;
+            font-size: 0.82rem;
+            border-radius: 1rem;
+        }
+
+        .badge.bg-primary  { background-color: var(--primary-blue) !important; }
+        .badge.bg-success  { background-color: var(--accent-green) !important; }
+        .badge.bg-danger   { background-color: var(--danger) !important; }
+        .badge.bg-warning  { background-color: var(--warning) !important; color: #fff !important; }
+        .badge.bg-info     { background-color: var(--info) !important; }
+        .badge.bg-light    { font-weight: 500; }
+
+        .input-group-text {
+            background-color: white;
+            border-color: #ced4da;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: var(--primary-blue-light);
+            box-shadow: 0 0 0 0.25rem rgba(42, 82, 152, 0.20);
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(30, 60, 114, 0.04);
+        }
+
+        .card-footer.bg-light {
+            background-color: #f8f9fa !important;
+        }
+
+        .page-item.active .page-link {
+            background-color: var(--primary-blue);
+            border-color: var(--primary-blue);
+        }
+
+        .page-link { color: var(--primary-blue); }
+        .page-link:hover { color: var(--primary-blue-light); }
+    </style>
+}
+
+@section Scripts {
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <script>
+        const input = document.getElementById('searchInput');
+        let timer;
+        input?.addEventListener('input', () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                document.getElementById('searchForm').submit();
+            }, 500);
+        });
+    </script>
+}

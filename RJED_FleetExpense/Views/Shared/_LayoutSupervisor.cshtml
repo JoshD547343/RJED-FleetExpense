@@ -1,0 +1,694 @@
+﻿@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+    var userName = User.FindFirst("FullName")?.Value
+                ?? User.Identity?.Name ?? "Supervisor";
+    var userInitial = userName.Length > 0 ? userName[0].ToString().ToUpper() : "S";
+    var pendingCount = (int)(ViewBag.PendingCount ?? 0);
+
+    bool IsActive(string action) =>
+        currentController == "Supervisor" && currentAction == action;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - RJED Fleet Expense</title>
+
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Familjen+Grotesk:wght@700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <style>
+        :root {
+            --ink: #0f1623;
+            --ink-2: #1e2a40;
+            --ink-3: #2c3d5a;
+            --slate: #f4f6fb;
+            --border: #e4e9f3;
+            --card: #ffffff;
+            --text: #1a2035;
+            --muted: #7b8aaa;
+            --sb-bg: #0f1623;
+            --sb-hover: #1e2a40;
+            --sb-border: rgba(255,255,255,0.06);
+            --sb-text: rgba(255,255,255,0.60);
+            --sb-hi: #ffffff;
+            --green: #10b981;
+            --green-bg: rgba(16,185,129,0.12);
+            --red: #ef4444;
+            --blue: #3b82f6;
+            --blue-bg: #eff6ff;
+            --sidebar-w: 236px;
+            --topbar-h: 62px;
+            --radius: 10px;
+            --radius-sm: 6px;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            background: var(--slate);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-w);
+            height: 100vh;
+            background: var(--sb-bg);
+            display: flex;
+            flex-direction: column;
+            z-index: 1040;
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+
+            .sidebar::-webkit-scrollbar {
+                display: none;
+            }
+
+        .sb-brand {
+            padding: 1.35rem 1.2rem 1.1rem;
+            border-bottom: 1px solid var(--sb-border);
+        }
+
+        .sb-brand-name {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1rem;
+            color: #fff;
+            letter-spacing: -0.3px;
+            line-height: 1.25;
+        }
+
+        .sb-brand-sub {
+            font-size: 0.68rem;
+            color: rgba(255,255,255,0.28);
+            margin-top: 2px;
+        }
+
+        .sb-role-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--green-bg);
+            border: 1px solid rgba(16,185,129,0.28);
+            color: var(--green);
+            border-radius: 20px;
+            padding: 2px 9px;
+            font-size: 0.64rem;
+            font-weight: 700;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            margin-top: 9px;
+        }
+
+        .sb-user {
+            padding: 0.75rem 1.2rem;
+            border-bottom: 1px solid var(--sb-border);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .sb-avatar {
+            width: 33px;
+            height: 33px;
+            border-radius: 8px;
+            background: var(--ink-3);
+            border: 2px solid var(--green);
+            color: #fff;
+            font-size: 0.76rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .sb-user-name {
+            font-size: 0.81rem;
+            font-weight: 600;
+            color: #fff;
+            line-height: 1.2;
+        }
+
+        .sb-user-sub {
+            font-size: 0.67rem;
+            color: rgba(255,255,255,0.32);
+        }
+
+        .sb-nav {
+            flex: 1;
+            padding: 0.4rem 0.55rem;
+        }
+
+        .sb-section {
+            font-size: 0.61rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.20);
+            padding: 0.95rem 10px 0.3rem;
+        }
+
+        .sb-link {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 8px 10px;
+            border-radius: var(--radius-sm);
+            color: var(--sb-text);
+            font-size: 0.845rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background 0.15s, color 0.15s, transform 0.14s;
+            margin-bottom: 1px;
+            position: relative;
+        }
+
+            .sb-link i {
+                font-size: 0.95rem;
+                width: 17px;
+                text-align: center;
+                flex-shrink: 0;
+            }
+
+            .sb-link:hover {
+                background: var(--sb-hover);
+                color: var(--sb-hi);
+                transform: translateX(2px);
+            }
+
+            .sb-link.active {
+                background: var(--sb-hover);
+                color: #fff;
+                font-weight: 600;
+            }
+
+                .sb-link.active::before {
+                    content: '';
+                    position: absolute;
+                    left: 0;
+                    top: 18%;
+                    bottom: 18%;
+                    width: 3px;
+                    background: var(--green);
+                    border-radius: 0 3px 3px 0;
+                }
+
+            .sb-link.priority i {
+                color: var(--green);
+            }
+
+        .sb-badge {
+            margin-left: auto;
+            background: var(--green);
+            color: #fff;
+            font-size: 0.62rem;
+            font-weight: 800;
+            padding: 1px 7px;
+            border-radius: 20px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .sb-bottom {
+            padding: 0.55rem;
+            border-top: 1px solid var(--sb-border);
+        }
+
+        .sb-divider {
+            border-color: var(--sb-border);
+            margin: 4px 0;
+        }
+
+        .sb-logout {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: var(--radius-sm);
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.48);
+            font-size: 0.845rem;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: background 0.15s, color 0.15s;
+        }
+
+            .sb-logout:hover {
+                background: #7f1d1d;
+                color: #fff;
+            }
+
+        .main-wrap {
+            margin-left: var(--sidebar-w);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .topbar {
+            height: var(--topbar-h);
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 900;
+        }
+
+        .topbar-title {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1.2;
+        }
+
+        .topbar-sub {
+            font-size: 0.73rem;
+            color: var(--muted);
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+        }
+
+        .tb-btn {
+            width: 35px;
+            height: 35px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.14s;
+            position: relative;
+            font-size: 0.95rem;
+            text-decoration: none;
+        }
+
+            .tb-btn:hover {
+                background: var(--slate);
+                color: var(--ink);
+            }
+
+        .tb-notif-dot {
+            position: absolute;
+            top: 7px;
+            right: 7px;
+            width: 6px;
+            height: 6px;
+            background: var(--green);
+            border-radius: 50%;
+            border: 1.5px solid #fff;
+        }
+
+        .tb-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 8px;
+            background: var(--ink);
+            color: #fff;
+            font-size: 0.76rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .page-body {
+            flex: 1;
+            padding: 1.75rem 2rem;
+        }
+
+        .flash-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.7rem 1.1rem;
+            font-size: 0.855rem;
+            border-radius: var(--radius-sm);
+            margin: 0.85rem 2rem 0;
+        }
+
+        .flash-success {
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            color: #065f46;
+        }
+
+        .flash-warning {
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            color: #9a3412;
+        }
+
+        .flash-error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+
+        .sb-toggle {
+            display: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--muted);
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.1rem;
+            margin-right: 0.5rem;
+        }
+
+        @@media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.24s ease;
+            }
+
+                .sidebar.open {
+                    transform: translateX(0);
+                }
+
+            .main-wrap {
+                margin-left: 0;
+            }
+
+            .sb-toggle {
+                display: flex;
+            }
+
+            .page-body {
+                padding: 1.2rem;
+            }
+
+            .topbar {
+                padding: 0 1.2rem;
+            }
+
+            .sb-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.42);
+                z-index: 1039;
+            }
+
+                .sb-overlay.show {
+                    display: block;
+                }
+
+            .flash-bar {
+                margin: 0.75rem 1.2rem 0;
+            }
+        }
+
+        @@media (max-width: 540px) {
+            .topbar-sub {
+                display: none;
+            }
+        }
+    </style>
+
+    @RenderSection("Styles", required: false)
+</head>
+<body>
+
+    <div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+
+    <nav class="sidebar" id="sidebar">
+
+        <div class="sb-brand">
+            <div class="sb-brand-name">RJED Fleet Expense</div>
+            <div class="sb-brand-sub">Management System</div>
+            <span class="sb-role-pill">
+                <i class="bi bi-person-badge-fill"></i> Supervisor
+            </span>
+        </div>
+
+        <div class="sb-user">
+            <div class="sb-avatar">@userInitial</div>
+            <div>
+                <div class="sb-user-name">@userName</div>
+                <div class="sb-user-sub">1st Layer Approver</div>
+            </div>
+        </div>
+
+        <div class="sb-nav">
+
+            <div class="sb-section">Overview</div>
+            <a class="sb-link @(IsActive("Dashboard") ? "active" : "")"
+               asp-controller="Supervisor" asp-action="Dashboard">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+
+            <div class="sb-section">Expenses</div>
+            <a class="sb-link priority @(IsActive("PendingExpense") ? "active" : "")"
+               asp-controller="Supervisor" asp-action="PendingExpense">
+                <i class="bi bi-hourglass-split"></i>
+                Pending Review
+                @if (pendingCount > 0)
+                {
+                    <span class="sb-badge">@pendingCount</span>
+                }
+            </a>
+            <a class="sb-link @(IsActive("Approve") ? "active" : "")"
+               asp-controller="Supervisor" asp-action="Approve">
+                <i class="bi bi-check2-circle"></i> Approved
+            </a>
+            <a class="sb-link @(IsActive("Reject") ? "active" : "")"
+               asp-controller="Supervisor" asp-action="Reject">
+                <i class="bi bi-x-circle"></i> Rejected
+            </a>
+
+            <div class="sb-section">Team</div>
+            <a class="sb-link @(IsActive("MyTeam") ? "active" : "")"
+               asp-controller="Supervisor" asp-action="MyTeam">
+                <i class="bi bi-people-fill"></i> My Team
+            </a>
+
+        </div>
+
+        <div class="sb-bottom">
+            <hr class="sb-divider" />
+            <form method="post"
+                  asp-area="Identity"
+                  asp-page="/Account/Logout"
+                  asp-route-returnUrl="/Identity/Account/Login">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="sb-logout">
+                    <i class="bi bi-box-arrow-left"></i> Logout
+                </button>
+            </form>
+        </div>
+
+    </nav>
+
+    <div class="main-wrap">
+
+        <header class="topbar">
+            <div style="display:flex;align-items:center">
+                <button class="sb-toggle" onclick="openSidebar()" aria-label="Open menu">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div>
+                    <div class="topbar-title">Welcome back, @userName 👋</div>
+                    <div class="topbar-sub">@DateTime.Now.ToString("dddd, MMMM dd, yyyy")</div>
+                </div>
+            </div>
+            <div class="topbar-right">
+                @if (pendingCount > 0)
+                {
+                    <a asp-controller="Supervisor" asp-action="PendingExpenses"
+                       class="tb-btn" title="@pendingCount item(s) pending review">
+                        <i class="bi bi-bell-fill" style="color:var(--green)"></i>
+                        <span class="tb-notif-dot"></span>
+                    </a>
+                }
+                else
+                {
+                    <button class="tb-btn" title="No new notifications">
+                        <i class="bi bi-bell"></i>
+                    </button>
+                }
+                <div class="tb-avatar">@userInitial</div>
+            </div>
+        </header>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="flash-bar flash-success">
+                <i class="bi bi-check-circle-fill"></i> @TempData["Success"]
+            </div>
+        }
+        @if (TempData["Warning"] != null)
+        {
+            <div class="flash-bar flash-warning">
+                <i class="bi bi-exclamation-triangle-fill"></i> @TempData["Warning"]
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="flash-bar flash-error">
+                <i class="bi bi-x-circle-fill"></i> @TempData["Error"]
+            </div>
+        }
+
+        <main class="page-body">
+            <div class="container-fluid px-0">
+                @RenderBody()
+            </div>
+        </main>
+
+    </div>
+
+    <!-- Reject Modal -->
+    <div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius:14px;border:none;box-shadow:0 20px 60px rgba(0,0,0,0.14)">
+                <div class="modal-header" style="border-bottom:1px solid var(--border);padding:1.05rem 1.35rem">
+                    <h6 class="modal-title" style="font-family:'Familjen Grotesk',sans-serif;font-weight:700;color:var(--red);display:flex;align-items:center;gap:0.4rem;margin:0">
+                        <i class="bi bi-x-octagon"></i> Reject Expense
+                    </h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="post" id="rejectForm">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-body" style="padding:1.2rem 1.35rem">
+                        <p style="font-size:0.86rem;color:var(--muted);margin-bottom:0.9rem">
+                            A rejection reason is <strong style="color:var(--text)">required</strong>.
+                            The employee will be notified with your remarks.
+                        </p>
+                        <label style="font-size:0.8rem;font-weight:600;color:var(--text);display:block;margin-bottom:5px">
+                            Reason for Rejection <span style="color:var(--red)">*</span>
+                        </label>
+                        <textarea id="rejectRemarks" name="remarks" rows="3" required
+                                  style="width:100%;padding:0.6rem 0.8rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:0.86rem;color:var(--text);resize:vertical;outline:none;transition:border-color 0.15s"
+                                  onfocus="this.style.borderColor='var(--red)'"
+                                  onblur="this.style.borderColor='var(--border)'"
+                                  placeholder="e.g. Missing receipt, amount exceeds limit…"></textarea>
+                        <div id="rejectErr" style="color:var(--red);font-size:0.76rem;margin-top:4px;display:none">
+                            Please enter a reason before rejecting.
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="border-top:1px solid var(--border);padding:0.8rem 1.35rem;gap:0.45rem">
+                        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal"
+                                style="border-radius:var(--radius-sm);font-size:0.84rem">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                style="background:var(--red);color:#fff;border:none;border-radius:var(--radius-sm);padding:0.45rem 1.1rem;font-size:0.84rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:0.35rem;font-family:inherit">
+                            <i class="bi bi-x-circle"></i> Confirm Rejection
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Approve Modal -->
+    <div class="modal fade" id="approveModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:400px">
+            <div class="modal-content" style="border-radius:14px;border:none;box-shadow:0 20px 60px rgba(0,0,0,0.14)">
+                <div class="modal-header" style="border-bottom:1px solid var(--border);padding:1.05rem 1.35rem">
+                    <h6 class="modal-title" style="font-family:'Familjen Grotesk',sans-serif;font-weight:700;color:var(--green);display:flex;align-items:center;gap:0.4rem;margin:0">
+                        <i class="bi bi-check-circle"></i> Approve Expense
+                    </h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="post" id="approveForm">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-body" style="padding:1.2rem 1.35rem">
+                        <p style="font-size:0.86rem;color:var(--muted);margin-bottom:0">
+                            This expense will be marked <strong style="color:var(--green)">Approved</strong>
+                            and forwarded to the next approver.
+                        </p>
+                    </div>
+                    <div class="modal-footer" style="border-top:1px solid var(--border);padding:0.8rem 1.35rem;gap:0.45rem">
+                        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal"
+                                style="border-radius:var(--radius-sm);font-size:0.84rem">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                style="background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);padding:0.45rem 1.1rem;font-size:0.84rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:0.35rem;font-family:inherit">
+                            <i class="bi bi-check-lg"></i> Yes, Approve
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        function openSidebar() {
+            document.getElementById('sidebar').classList.add('open');
+            document.getElementById('sbOverlay').classList.add('show');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sbOverlay').classList.remove('show');
+        }
+
+        var approveModal = document.getElementById('approveModal');
+        if (approveModal) {
+            approveModal.addEventListener('show.bs.modal', function (e) {
+                var id = e.relatedTarget.getAttribute('data-expense-id');
+                document.getElementById('approveForm').action = '/Supervisor/Approve/' + id;
+            });
+        }
+
+        var rejectModal = document.getElementById('rejectModal');
+        if (rejectModal) {
+            rejectModal.addEventListener('show.bs.modal', function (e) {
+                var id = e.relatedTarget.getAttribute('data-expense-id');
+                document.getElementById('rejectForm').action = '/Supervisor/Reject/' + id;
+                document.getElementById('rejectRemarks').value = '';
+                document.getElementById('rejectErr').style.display = 'none';
+            });
+            document.getElementById('rejectForm').addEventListener('submit', function (e) {
+                if (!document.getElementById('rejectRemarks').value.trim()) {
+                    e.preventDefault();
+                    document.getElementById('rejectErr').style.display = 'block';
+                }
+            });
+        }
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+
+</body>
+</html>

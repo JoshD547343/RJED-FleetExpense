@@ -1,0 +1,607 @@
+﻿@model IEnumerable<RJED_FleetExpense.Models.Department>
+@{
+    ViewData["Title"] = "Departments";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+
+    var counts = ViewBag.MemberCounts as Dictionary<string, int> ?? new Dictionary<string, int>();
+    var depts = Model.ToList();
+    var totalMembers = depts.Sum(d => counts.TryGetValue(d.DepartmentName, out var c) ? c : 0);
+}
+
+@section Styles {
+    <style>
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.4rem;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 4px solid transparent;
+            border-radius: 12px;
+            padding: 1.05rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            opacity: 0;
+            transform: translateY(10px);
+            animation: rise 0.38s ease forwards;
+        }
+
+            .stat-card:nth-child(1) {
+                border-left-color: #ca8a04;
+                animation-delay: 0s;
+            }
+
+            .stat-card:nth-child(2) {
+                border-left-color: var(--green);
+                animation-delay: 0.06s;
+            }
+
+            .stat-card:nth-child(3) {
+                border-left-color: var(--red);
+                animation-delay: 0.12s;
+            }
+
+            .stat-card:nth-child(4) {
+                border-left-color: #3b82f6;
+                animation-delay: 0.18s;
+            }
+
+        .stat-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .stat-label {
+            font-size: 0.68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .stat-sub {
+            font-size: 0.7rem;
+            color: var(--muted);
+        }
+
+        .stat-value {
+            margin-left: auto;
+            text-align: right;
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1.1;
+        }
+
+        .sc {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            margin-bottom: 1.4rem;
+        }
+
+        .sc-head {
+            padding: 0.85rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: .6rem;
+        }
+
+        .sc-title {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sc-foot {
+            padding: .75rem 1.2rem;
+            border-top: 1px solid var(--border);
+            font-size: .78rem;
+            color: var(--muted);
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-wrap {
+            position: relative;
+        }
+
+            .search-wrap i {
+                position: absolute;
+                left: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--muted);
+                font-size: 0.8rem;
+            }
+
+        .search-input {
+            padding: 6px 11px 6px 30px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.82rem;
+            width: 220px;
+        }
+
+        .filter-select {
+            padding: 6px 11px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.82rem;
+            background: #fff;
+            color: var(--text);
+            cursor: pointer;
+        }
+
+            .search-input:focus, .filter-select:focus {
+                outline: none;
+                border-color: var(--ink-2);
+            }
+
+        /* Table */
+        .ex-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .ex-table thead th {
+                background: #f8faff;
+                color: var(--muted);
+                font-size: 0.66rem;
+                text-transform: uppercase;
+                letter-spacing: .6px;
+                padding: 0.7rem 1rem;
+                text-align: left;
+                white-space: nowrap;
+            }
+
+            .ex-table tbody td {
+                padding: 0.78rem 1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: .84rem;
+                vertical-align: middle;
+            }
+
+            .ex-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .ex-table tbody tr:hover {
+                background: #f8faff;
+            }
+
+        .dept-avatar {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.75rem;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        .dept-name {
+            font-weight: 600;
+            vertical-align: middle;
+        }
+
+        .dept-code {
+            background: #f1f5f9;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            color: var(--ink);
+            font-weight: 700;
+            font-family: "Consolas", monospace;
+        }
+
+        .st {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .st-ok {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .st-rej {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .btn-view {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1.5px solid var(--border);
+            background: var(--slate);
+            color: var(--muted);
+            font-size: .76rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+            .btn-view:hover {
+                color: var(--ink);
+                border-color: var(--ink-2);
+            }
+
+        .empty-box {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: var(--muted);
+        }
+
+            .empty-box i {
+                font-size: 2rem;
+                opacity: .25;
+                display: block;
+                margin-bottom: .5rem;
+            }
+
+        /* Modal */
+        .modal-content {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.15);
+        }
+
+        .modal-header {
+            border-radius: 12px 12px 0 0;
+            padding: 1rem 1.3rem;
+            background: var(--ink);
+            color: white;
+        }
+
+        .modal .form-label {
+            font-size: .72rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .modal .form-control, .modal .form-select {
+            border-radius: 8px;
+            font-size: 0.88rem;
+            border: 1.5px solid var(--border);
+        }
+
+            .modal .form-control:focus, .modal .form-select:focus {
+                border-color: var(--ink-2);
+                box-shadow: none;
+            }
+
+        .modal-footer {
+            border-top: 1px solid var(--border);
+            padding: .85rem 1.3rem;
+        }
+
+        .btn-modal-primary {
+            background: var(--ink);
+            color: white;
+            border-radius: 8px;
+            padding: 7px 18px;
+            font-size: .84rem;
+            font-weight: 600;
+            border: none;
+        }
+
+            .btn-modal-primary:hover {
+                color: #fff;
+                opacity: .9;
+            }
+
+        .btn-modal-cancel {
+            background: var(--slate);
+            color: var(--muted);
+            border-radius: 8px;
+            padding: 7px 18px;
+            font-size: .84rem;
+            font-weight: 600;
+            border: 1.5px solid var(--border);
+        }
+
+            .btn-modal-cancel:hover {
+                color: var(--ink);
+            }
+
+        @@keyframes rise {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@media (max-width: 1199px) {
+            .stat-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @@media (max-width: 575px) {
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .search-input {
+                width: 100%;
+            }
+        }
+    </style>
+}
+
+<!-- Alerts -->
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+        <i class="bi bi-check-circle me-2"></i>@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+        <i class="bi bi-exclamation-circle me-2"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Stat Cards -->
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fefce8;color:#ca8a04"><i class="bi bi-building"></i></div>
+        <div>
+            <div class="stat-label">Total Departments</div>
+            <div class="stat-sub">Finance &amp; Logistics</div>
+        </div>
+        <div class="stat-value">@depts.Count</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#ecfdf5;color:var(--green)"><i class="bi bi-check-circle"></i></div>
+        <div>
+            <div class="stat-label">Active</div>
+            <div class="stat-sub">Currently operating</div>
+        </div>
+        <div class="stat-value">@depts.Count(d => d.IsActive)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fef2f2;color:var(--red)"><i class="bi bi-x-circle"></i></div>
+        <div>
+            <div class="stat-label">Inactive</div>
+            <div class="stat-sub">Not operating</div>
+        </div>
+        <div class="stat-value">@depts.Count(d => !d.IsActive)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#f0f9ff;color:#3b82f6"><i class="bi bi-people"></i></div>
+        <div>
+            <div class="stat-label">Total Members</div>
+            <div class="stat-sub">Excludes archived users</div>
+        </div>
+        <div class="stat-value">@totalMembers</div>
+    </div>
+</div>
+
+<!-- Department List -->
+<div class="sc">
+    <div class="sc-head">
+        <h6 class="sc-title"><i class="bi bi-list-ul"></i> Department List</h6>
+        <div class="controls">
+            <div class="search-wrap">
+                <i class="bi bi-search"></i>
+                <input class="search-input" type="text" id="deptSearch" placeholder="Search department..." oninput="filterDepts()" />
+            </div>
+            <select class="filter-select" id="deptStatus" onchange="filterDepts()">
+                <option value="">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+            </select>
+        </div>
+    </div>
+
+    @if (depts.Any())
+    {
+        <div style="overflow-x:auto">
+            <table class="ex-table" id="deptTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Department</th>
+                        <th>Code</th>
+                        <th>Department Head</th>
+                        <th>Members</th>
+                        <th>Status</th>
+                        <th>Date Created</th>
+                        <th style="text-align:center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var n = 0;
+                    }
+                    @foreach (var d in depts)
+                    {
+                        n++;
+                        var members = counts.TryGetValue(d.DepartmentName, out var c) ? c : 0;
+                        var status = d.IsActive ? "Active" : "Inactive";
+                        var code = d.CostCenterCode ?? "";
+                        var initials = d.DepartmentName.Length >= 2 ? d.DepartmentName.Substring(0, 2).ToUpper() : d.DepartmentName.ToUpper();
+                        var avatarColor = code == "FIN" ? "#14294f" : code == "LOG" ? "#f57f17" : "#455a64";
+
+                        <tr data-id="@d.DepartmentId"
+                            data-name="@d.DepartmentName"
+                            data-code="@code"
+                            data-head="@d.DepartmentHead"
+                            data-status="@status">
+                            <td style="color:var(--muted);font-size:.78rem">@n</td>
+                            <td>
+                                <span class="dept-avatar" style="background:@avatarColor">@initials</span><span class="dept-name">@d.DepartmentName</span>
+                            </td>
+                            <td><span class="dept-code">@(string.IsNullOrEmpty(code) ? "—" : code)</span></td>
+                            <td>
+                                @if (string.IsNullOrWhiteSpace(d.DepartmentHead))
+                                {
+                                    <span class="text-muted">Not assigned</span>
+                                }
+                                else
+                                {
+                                    @d.DepartmentHead
+                                }
+                            </td>
+                            <td style="font-weight:700">@members</td>
+                            <td>
+                                @if (d.IsActive)
+                                {
+                                    <span class="st st-ok"><i class="bi bi-check-circle-fill"></i> Active</span>
+                                }
+                                else
+                                {
+                                    <span class="st st-rej"><i class="bi bi-x-circle-fill"></i> Inactive</span>
+                                }
+                            </td>
+                            <td style="white-space:nowrap;color:var(--muted);font-size:0.8rem">@d.DateCreated.ToLocalTime().ToString("MMM dd, yyyy")</td>
+                            <td style="text-align:center">
+                                <button class="btn-view edit-dept-btn" title="Edit department"
+                                        data-bs-toggle="modal" data-bs-target="#modalEditDept">
+                                    <i class="bi bi-pencil-square"></i> Edit
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="sc-foot" id="deptCount">Showing @depts.Count of @depts.Count departments</div>
+    }
+    else
+    {
+        <div class="empty-box">
+            <i class="bi bi-building"></i>
+            <p class="mb-0">No departments found. Run the setup SQL to add Finance and Logistics.</p>
+        </div>
+    }
+</div>
+
+<!-- ── EDIT DEPARTMENT MODAL ── -->
+<div class="modal fade" id="modalEditDept" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" style="font-size:1rem"><i class="bi bi-pencil-square me-2"></i>Edit Department</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="/Admin/Dashboard/Department/Edit">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="editDeptId" />
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Department</label>
+                            <input type="text" class="form-control" id="editDeptName" readonly style="background:#f8f9fa;" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Code</label>
+                            <input type="text" class="form-control" id="editDeptCode" readonly style="background:#f8f9fa;" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Department Head</label>
+                            <input type="text" name="departmentHead" class="form-control" id="editDeptHead"
+                                   placeholder="e.g. Juan Dela Cruz" maxlength="150" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select" id="editDeptStatus">
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-modal-primary">
+                        <i class="bi bi-save me-1"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Populate edit modal
+        document.querySelectorAll('.edit-dept-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const row = this.closest('tr');
+                document.getElementById('editDeptId').value     = row.dataset.id;
+                document.getElementById('editDeptName').value   = row.dataset.name;
+                document.getElementById('editDeptCode').value   = row.dataset.code;
+                document.getElementById('editDeptHead').value   = row.dataset.head || '';
+                document.getElementById('editDeptStatus').value = row.dataset.status;
+            });
+        });
+
+        // Search + status filter
+        function filterDepts() {
+            const text = document.getElementById('deptSearch').value.toLowerCase().trim();
+            const status = document.getElementById('deptStatus').value;
+            const rows = document.querySelectorAll('#deptTable tbody tr');
+            let visible = 0;
+            rows.forEach(row => {
+                const matchText = row.textContent.toLowerCase().includes(text);
+                const matchStatus = !status || row.dataset.status === status;
+                const show = matchText && matchStatus;
+                row.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+            document.getElementById('deptCount').textContent = `Showing ${visible} of ${rows.length} departments`;
+        }
+    </script>
+}

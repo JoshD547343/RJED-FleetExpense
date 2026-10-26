@@ -1,0 +1,510 @@
+﻿@model IEnumerable<RJED_FleetExpense.Models.Expense>
+@{
+    ViewData["Title"] = "Expenses";
+    Layout = "~/Views/Shared/_LayoutDepartment.cshtml";
+
+    var categories = ViewBag.Categories as List<string> ?? new List<string>();
+    decimal filteredTotal = (decimal)(ViewBag.FilteredTotal ?? 0m);
+    int filteredCount = (int)(ViewBag.FilteredCount ?? 0);
+    decimal thisMonth = (decimal)(ViewBag.ThisMonthTotal ?? 0m);
+}
+
+@section Styles {
+    <style>
+        .page-hd {
+            margin-bottom: 1.4rem;
+        }
+
+        .page-hd-title {
+            font-family: 'Familjen Grotesk',sans-serif;
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--ink);
+            margin: 0 0 3px;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+
+        .page-hd-sub {
+            font-size: .78rem;
+            color: var(--muted);
+        }
+
+        .kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .kpi-chip {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--green);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: .85rem;
+            box-shadow: 0 1px 3px rgba(15,22,35,.04);
+        }
+
+        .kpi-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            flex-shrink: 0;
+            background: #ecfdf5;
+            color: var(--green);
+        }
+
+        .kpi-label {
+            font-size: .68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            font-weight: 700;
+        }
+
+        .kpi-sub {
+            font-size: .72rem;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .kpi-val {
+            margin-left: auto;
+            text-align: right;
+            font-family: 'Familjen Grotesk',sans-serif;
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--ink);
+            line-height: 1.1;
+        }
+
+        .filter-bar {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: .85rem 1.1rem;
+            margin-bottom: 1.1rem;
+        }
+
+        .fl-label {
+            font-size: .72rem;
+            font-weight: 700;
+            color: var(--muted);
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .fl-input {
+            width: 100%;
+            padding: .46rem .75rem;
+            border: 1.5px solid var(--border);
+            border-radius: 7px;
+            font-family: inherit;
+            font-size: .835rem;
+            color: var(--text);
+            background: var(--slate);
+            outline: none;
+        }
+
+            .fl-input:focus {
+                border-color: var(--green);
+                background: #fff;
+            }
+
+        .fl-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: .46rem 1rem;
+            border-radius: 7px;
+            font-size: .835rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            font-family: inherit;
+        }
+
+        .fl-primary {
+            background: var(--green);
+            color: #fff;
+        }
+
+        .fl-ghost {
+            background: var(--slate);
+            color: var(--muted);
+            border: 1.5px solid var(--border);
+        }
+
+        .tc {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(15,22,35,.04);
+        }
+
+        .tc-head {
+            padding: .85rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: .5rem;
+        }
+
+        .tc-title {
+            font-family: 'Familjen Grotesk',sans-serif;
+            font-size: .93rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: .45rem;
+        }
+
+        .tbl {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .tbl thead th {
+                background: #f8faff;
+                color: var(--muted);
+                font-size: .65rem;
+                text-transform: uppercase;
+                letter-spacing: .7px;
+                font-weight: 700;
+                padding: .7rem 1rem;
+                text-align: left;
+                white-space: nowrap;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .tbl tbody td {
+                padding: .8rem 1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: .84rem;
+                color: var(--text);
+                vertical-align: middle;
+            }
+
+            .tbl tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .tbl tbody tr:hover {
+                background: #f0fdf9;
+            }
+
+        .id-cell {
+            color: var(--muted);
+            font-size: .8rem;
+            font-weight: 600;
+        }
+
+        .emp-cell {
+            display: flex;
+            align-items: center;
+            gap: .55rem;
+        }
+
+        .av {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: #ecfdf5;
+            border: 1.5px solid #a7f3d0;
+            color: #065f46;
+            font-size: .72rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .emp-name {
+            font-weight: 600;
+            color: var(--ink);
+            line-height: 1.2;
+        }
+
+        .emp-dept {
+            font-size: .72rem;
+            color: var(--muted);
+        }
+
+        .type-badge {
+            display: inline-block;
+            padding: 2px 9px;
+            background: var(--slate);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: .72rem;
+            font-weight: 600;
+        }
+
+        .plate-chip {
+            font-family: 'Familjen Grotesk',sans-serif;
+            font-weight: 800;
+            letter-spacing: 1.2px;
+            font-size: .78rem;
+            color: var(--ink);
+            background: var(--slate);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 2px 8px;
+        }
+
+        .amt {
+            font-family: 'Familjen Grotesk',sans-serif;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .muted-sm {
+            color: var(--muted);
+            font-size: .8rem;
+            white-space: nowrap;
+        }
+
+        .desc-cell {
+            max-width: 190px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: block;
+        }
+
+        .st-paid {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: .7rem;
+            font-weight: 700;
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+            white-space: nowrap;
+        }
+
+        .act-view {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1.5px solid var(--border);
+            background: var(--slate);
+            color: var(--muted);
+            font-size: .76rem;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+            .act-view:hover {
+                color: var(--ink);
+                border-color: var(--ink-2);
+            }
+
+        .tfoot-bar {
+            padding: .75rem 1.25rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: .5rem;
+        }
+
+        .empty-box {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--muted);
+        }
+
+            .empty-box i {
+                font-size: 2.2rem;
+                opacity: .25;
+                display: block;
+                margin-bottom: .6rem;
+            }
+
+        @@media (max-width: 992px) {
+            .kpi-strip {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+}
+
+<div class="page-hd">
+    <h1 class="page-hd-title">
+        <i class="bi bi-receipt" style="color:var(--green);font-size:1.15rem"></i>
+        Expenses
+    </h1>
+    <div class="page-hd-sub">Reimbursed expenses only. Pending and unpaid items are not counted.</div>
+</div>
+
+<div class="kpi-strip">
+    <div class="kpi-chip">
+        <div class="kpi-icon"><i class="bi bi-cash-stack"></i></div>
+        <div>
+            <div class="kpi-label">Total Reimbursed</div>
+            <div class="kpi-sub">Based on current filters</div>
+        </div>
+        <div class="kpi-val">&#8369;@String.Format("{0:N0}", filteredTotal)</div>
+    </div>
+    <div class="kpi-chip">
+        <div class="kpi-icon"><i class="bi bi-receipt-cutoff"></i></div>
+        <div>
+            <div class="kpi-label">Expenses</div>
+            <div class="kpi-sub">Reimbursed records</div>
+        </div>
+        <div class="kpi-val">@filteredCount</div>
+    </div>
+    <div class="kpi-chip">
+        <div class="kpi-icon"><i class="bi bi-calendar-check"></i></div>
+        <div>
+            <div class="kpi-label">This Month</div>
+            <div class="kpi-sub">@DateTime.Now.ToString("MMMM yyyy")</div>
+        </div>
+        <div class="kpi-val">&#8369;@String.Format("{0:N0}", thisMonth)</div>
+    </div>
+</div>
+
+<!-- Filter -->
+<div class="filter-bar">
+    <form method="get" asp-controller="Department" asp-action="Expenses" class="row g-3 align-items-end">
+        <div class="col-lg-3 col-md-6">
+            <label class="fl-label">Search</label>
+            <input type="search" name="search" class="fl-input"
+                   placeholder="Employee, description or plate…" value="@ViewBag.Search" />
+        </div>
+        <div class="col-lg-2 col-md-6">
+            <label class="fl-label">Category</label>
+            <select name="category" class="fl-input">
+                <option value="">All Categories</option>
+                @foreach (var c in categories)
+                {
+                    <option value="@c" selected="@(ViewBag.Category == c)">@c</option>
+                }
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-6">
+            <label class="fl-label">Date From</label>
+            <input type="date" name="dateFrom" class="fl-input" value="@ViewBag.DateFrom" />
+        </div>
+        <div class="col-lg-2 col-md-6">
+            <label class="fl-label">Date To</label>
+            <input type="date" name="dateTo" class="fl-input" value="@ViewBag.DateTo" />
+        </div>
+        <div class="col-lg-3 d-flex gap-2">
+            <button type="submit" class="fl-btn fl-primary flex-grow-1"><i class="bi bi-funnel"></i> Filter</button>
+            <a asp-controller="Department" asp-action="Expenses" class="fl-btn fl-ghost"><i class="bi bi-x-lg"></i> Reset</a>
+        </div>
+    </form>
+</div>
+
+<div class="tc">
+    <div class="tc-head">
+        <h6 class="tc-title">
+            <i class="bi bi-list-ul" style="color:var(--green)"></i> Reimbursed Expenses
+        </h6>
+        <span style="font-size:.76rem;color:var(--muted)">Showing @filteredCount result(s)</span>
+    </div>
+
+    @if (Model != null && Model.Any())
+    {
+        <div style="overflow-x:auto">
+            <table class="tbl">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Employee</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Vehicle</th>
+                        <th>Amount</th>
+                        <th>Expense Date</th>
+                        <th>Paid On</th>
+                        <th>Status</th>
+                        <th style="text-align:center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var e in Model)
+                    {
+                        var name = e.User?.FullName ?? e.User?.UserName ?? "Unknown";
+                        var dept = e.User?.Department ?? "—";
+                        var initial = name.Length > 0 ? name[0].ToString().ToUpper() : "?";
+                        var paidOn = string.Format("{0:MMM dd, yyyy}", e.Reimbursement?.PaymentDate);
+
+                        <tr>
+                            <td class="id-cell">@e.Id</td>
+                            <td>
+                                <div class="emp-cell">
+                                    <div class="av">@initial</div>
+                                    <div>
+                                        <div class="emp-name">@name</div>
+                                        <div class="emp-dept">@dept</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="desc-cell" title="@e.Description">@e.Description</span></td>
+                            <td><span class="type-badge">@e.ExpenseType</span></td>
+                            <td>
+                                @if (string.IsNullOrWhiteSpace(e.PlateNumber))
+                                {
+                                    <span class="muted-sm">—</span>
+                                }
+                                else
+                                {
+                                    <span class="plate-chip">@e.PlateNumber</span>
+                                }
+                            </td>
+                            <td><span class="amt">&#8369;@String.Format("{0:N2}", e.Amount)</span></td>
+                            <td class="muted-sm">@e.ExpenseDate.ToString("MMM dd, yyyy")</td>
+                            <td class="muted-sm">@(string.IsNullOrWhiteSpace(paidOn) ? "—" : paidOn)</td>
+                            <td><span class="st-paid"><i class="bi bi-check-circle-fill"></i> Reimbursed</span></td>
+                            <td style="text-align:center">
+                                <a asp-controller="Department" asp-action="Details" asp-route-id="@e.Id" class="act-view">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="tfoot-bar">
+            <span style="font-size:.78rem;color:var(--muted)">@filteredCount expense(s) shown</span>
+            <span style="font-family:'Familjen Grotesk',sans-serif;font-weight:700;color:var(--ink)">
+                Total: &#8369;@String.Format("{0:N2}", filteredTotal)
+            </span>
+        </div>
+    }
+    else
+    {
+        <div class="empty-box">
+            <i class="bi bi-inbox"></i>
+            <p class="mb-0">No reimbursed expenses found.<br>Expenses appear here once Accounting has paid them.</p>
+        </div>
+    }
+</div>

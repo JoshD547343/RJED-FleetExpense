@@ -1,0 +1,771 @@
+﻿@* Views/Supervisor/MyTeam.cshtml *@
+@model RJED.ViewModels.Supervisor.MyTeamPageViewModel
+@{
+    ViewData["Title"] = "My Team";
+    Layout = "~/Views/Shared/_LayoutSupervisor.cshtml";
+}
+
+@section Styles {
+    <style>
+        .ph {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.6rem;
+        }
+
+        .ph-title {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1.45rem;
+            font-weight: 800;
+            color: var(--ink);
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            margin: 0 0 3px;
+        }
+
+            .ph-title i {
+                color: var(--blue);
+                font-size: 1.2rem;
+            }
+
+        .breadcrumb {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            display: flex;
+            gap: .35rem;
+            font-size: 0.76rem;
+            color: var(--muted);
+        }
+
+            .breadcrumb li + li::before {
+                content: '/';
+                margin-right: .35rem;
+            }
+
+            .breadcrumb a {
+                color: var(--muted);
+                text-decoration: none;
+            }
+
+                .breadcrumb a:hover {
+                    color: var(--ink);
+                }
+
+        .stat-strip {
+            display: grid;
+            grid-template-columns: repeat(4,1fr);
+            gap: 1rem;
+            margin-bottom: 1.4rem;
+        }
+
+        .scard {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.05rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: .9rem;
+            box-shadow: 0 1px 4px rgba(15,22,35,0.04);
+            opacity: 0;
+            transform: translateY(8px);
+            animation: rise .34s ease forwards;
+        }
+
+            .scard:nth-child(1) {
+                animation-delay: 0s;
+                border-left: 3px solid var(--blue);
+            }
+
+            .scard:nth-child(2) {
+                animation-delay: 0.07s;
+                border-left: 3px solid var(--amber);
+            }
+
+            .scard:nth-child(3) {
+                animation-delay: 0.14s;
+                border-left: 3px solid var(--green);
+            }
+
+            .scard:nth-child(4) {
+                animation-delay: 0.21s;
+                border-left: 3px solid var(--red);
+            }
+
+        .scard-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .scard-label {
+            font-size: .68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .scard-value {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--ink);
+            line-height: 1.1;
+        }
+
+        .scard-sub {
+            font-size: .7rem;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .fc {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem 1.3rem;
+            margin-bottom: 1.25rem;
+            opacity: 0;
+            animation: rise .34s ease .21s forwards;
+        }
+
+        .fc-label {
+            font-size: .73rem;
+            font-weight: 700;
+            color: var(--muted);
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .fc-input {
+            width: 100%;
+            padding: .46rem .75rem;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: .845rem;
+            color: var(--text);
+            background: var(--slate);
+            outline: none;
+            transition: border-color .15s, background .15s;
+        }
+
+            .fc-input:focus {
+                border-color: var(--blue);
+                background: #fff;
+            }
+
+        .input-wrap {
+            position: relative;
+        }
+
+            .input-wrap i {
+                position: absolute;
+                left: .7rem;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--muted);
+                font-size: .85rem;
+                pointer-events: none;
+            }
+
+            .input-wrap .fc-input {
+                padding-left: 2rem;
+            }
+
+        .btn-f {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: .46rem 1rem;
+            border-radius: var(--radius-sm);
+            font-size: .845rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+            transition: opacity .14s;
+            text-decoration: none;
+        }
+
+            .btn-f:hover {
+                opacity: .88;
+            }
+
+        .btn-blue {
+            background: var(--blue);
+            color: #fff;
+        }
+
+        .btn-clear {
+            background: var(--slate);
+            color: var(--muted);
+            border: 1.5px solid var(--border);
+        }
+        /* Team cards */
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(3,1fr);
+            gap: 1rem;
+            margin-bottom: 1.4rem;
+            opacity: 0;
+            animation: rise .38s ease .28s forwards;
+        }
+
+        .tcard {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(15,22,35,0.04);
+            transition: box-shadow .16s, transform .16s;
+        }
+
+            .tcard:hover {
+                box-shadow: 0 4px 14px rgba(15,22,35,0.08);
+                transform: translateY(-2px);
+            }
+
+        .tcard-header {
+            padding: 1rem 1.15rem .75rem;
+            display: flex;
+            align-items: flex-start;
+            gap: .75rem;
+            position: relative;
+        }
+
+        .tcard-av {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: var(--blue-bg);
+            border: 2px solid var(--blue);
+            color: var(--blue);
+            font-size: .9rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .tcard-name {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: .95rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin: 0 0 2px;
+        }
+
+        .tcard-dept {
+            font-size: .73rem;
+            color: var(--muted);
+            margin-bottom: 4px;
+        }
+
+        .dept-pill {
+            display: inline-block;
+            padding: 2px 8px;
+            background: var(--blue-bg);
+            border: 1px solid var(--blue);
+            color: var(--blue);
+            border-radius: 20px;
+            font-size: .68rem;
+            font-weight: 700;
+        }
+
+        .pending-badge {
+            position: absolute;
+            top: .85rem;
+            right: .85rem;
+            background: var(--amber);
+            color: #fff;
+            border-radius: 20px;
+            font-size: .7rem;
+            font-weight: 800;
+            padding: 2px 8px;
+        }
+
+        .tcard-contact {
+            padding: 0 1.15rem .75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+            font-size: .78rem;
+            color: var(--muted);
+            text-decoration: none;
+            margin-bottom: 3px;
+            transition: color .12s;
+        }
+
+            .contact-item:hover {
+                color: var(--ink);
+            }
+
+        .tcard-stats {
+            padding: .75rem 1.15rem;
+            display: grid;
+            grid-template-columns: repeat(4,1fr);
+            gap: .5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tstat {
+            text-align: center;
+        }
+
+        .tstat-val {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 800;
+            line-height: 1.1;
+        }
+
+        .tstat-lbl {
+            font-size: .65rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .tcard-progress {
+            padding: .5rem 1.15rem;
+        }
+
+        .prog-track {
+            height: 6px;
+            background: var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .prog-seg {
+            height: 100%;
+        }
+
+        .tcard-footer {
+            padding: .65rem 1.15rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: .75rem;
+            color: var(--muted);
+        }
+        /* Summary table */
+        .tc {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(15,22,35,0.04);
+            opacity: 0;
+            animation: rise .42s ease .35s forwards;
+        }
+
+        .tc-head {
+            padding: .9rem 1.3rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: .5rem;
+        }
+
+        .tc-title {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: .95rem;
+            font-weight: 700;
+            color: var(--ink);
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+            margin: 0;
+        }
+
+            .tc-title i {
+                color: var(--blue);
+            }
+
+        .dt {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .dt thead th {
+                background: #f8faff;
+                color: var(--muted);
+                font-size: .65rem;
+                text-transform: uppercase;
+                letter-spacing: .7px;
+                font-weight: 700;
+                padding: .72rem 1rem;
+                text-align: left;
+                border-bottom: 1px solid var(--border);
+                white-space: nowrap;
+            }
+
+            .dt tbody td {
+                padding: .8rem 1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: .845rem;
+                color: var(--text);
+                vertical-align: middle;
+            }
+
+            .dt tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .dt tbody tr {
+                transition: background .12s;
+            }
+
+                .dt tbody tr:hover {
+                    background: #f0f9ff;
+                }
+
+        .emp-cell {
+            display: flex;
+            align-items: center;
+            gap: .55rem;
+        }
+
+        .av-blue {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--blue-bg);
+            border: 1.5px solid var(--blue);
+            color: var(--blue);
+            font-size: .72rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .emp-name {
+            font-weight: 600;
+            font-size: .845rem;
+            color: var(--ink);
+        }
+
+        td.muted-sm {
+            color: var(--muted);
+            font-size: .8rem;
+            white-space: nowrap;
+        }
+
+        .b-warn {
+            background: #fff7ed;
+            color: #9a3412;
+            border: 1px solid #fed7aa;
+            border-radius: 20px;
+            font-size: .7rem;
+            font-weight: 700;
+            padding: 2px 8px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--muted);
+        }
+
+            .empty-state i {
+                font-size: 2.2rem;
+                opacity: .2;
+                display: block;
+                margin-bottom: .6rem;
+            }
+
+            .empty-state h6 {
+                font-weight: 700;
+                color: var(--ink);
+                margin-bottom: .3rem;
+            }
+
+            .empty-state p {
+                font-size: .845rem;
+                margin: 0;
+            }
+
+        @@keyframes rise {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@media (max-width: 1100px) {
+            .team-grid {
+                grid-template-columns: repeat(2,1fr);
+            }
+        }
+
+        @@media (max-width: 900px) {
+            .stat-strip {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @@media (max-width: 640px) {
+            .team-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .ph {
+                flex-direction: column;
+            }
+        }
+
+        @@media (max-width: 580px) {
+            .stat-strip {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+}
+
+<div class="ph">
+    <div>
+        <h4 class="ph-title"><i class="bi bi-people-fill"></i> My Team</h4>
+        <ol class="breadcrumb">
+            <li><a asp-action="Dashboard">Dashboard</a></li>
+            <li>My Team</li>
+        </ol>
+    </div>
+    <span style="font-size:.8rem;color:var(--muted);align-self:center">
+        <i class="bi bi-building me-1"></i>
+        @Model.TotalTeamMembers member@(Model.TotalTeamMembers != 1 ? "s" : "") under your supervision
+    </span>
+</div>
+
+<div class="stat-strip">
+    <div class="scard">
+        <div class="scard-icon" style="background:var(--blue-bg);color:var(--blue)"><i class="bi bi-people"></i></div>
+        <div>
+            <div class="scard-label">Team Size</div>
+            <div class="scard-value">@Model.TotalTeamMembers</div>
+            <div class="scard-sub">Active members</div>
+        </div>
+    </div>
+    <div class="scard">
+        <div class="scard-icon" style="background:#fff7ed;color:var(--amber)"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+            <div class="scard-label">Pending Expenses</div>
+            <div class="scard-value">@Model.TotalPendingAcrossTeam</div>
+            <div class="scard-sub">Awaiting approval</div>
+        </div>
+    </div>
+    <div class="scard">
+        <div class="scard-icon" style="background:#ecfdf5;color:var(--green)"><i class="bi bi-buildings"></i></div>
+        <div>
+            <div class="scard-label">Departments</div>
+            <div class="scard-value">@Model.Departments.Count</div>
+            <div class="scard-sub">Represented</div>
+        </div>
+    </div>
+    <div class="scard">
+        <div class="scard-icon" style="background:#fef2f2;color:var(--red)"><i class="bi bi-trophy"></i></div>
+        <div>
+            <div class="scard-label">Most Active</div>
+            <div class="scard-value" style="font-size:1rem;line-height:1.3">@(Model.MostActiveEmployeeName ?? "—")</div>
+            <div class="scard-sub">@Model.MostActiveEmployeeCount expenses</div>
+        </div>
+    </div>
+</div>
+
+<div class="fc">
+    <form method="get" asp-action="MyTeam" class="row g-3 align-items-end">
+        <div class="col-md-5">
+            <label class="fc-label">Search Employee</label>
+            <div class="input-wrap">
+                <i class="bi bi-search"></i>
+                <input type="text" name="search" value="@Model.SearchTerm" class="fc-input" placeholder="Name or email address…" />
+            </div>
+        </div>
+        <div class="col-md-4">
+            <label class="fc-label">Department</label>
+            <select name="department" class="fc-input">
+                <option value="">All Departments</option>
+                @foreach (var dept in Model.Departments)
+                {
+                    <option value="@dept" selected="@(Model.DepartmentFilter == dept)">@dept</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+            <button type="submit" class="btn-f btn-blue flex-grow-1"><i class="bi bi-funnel"></i> Filter</button>
+            <a asp-action="MyTeam" class="btn-f btn-clear"><i class="bi bi-x-lg"></i></a>
+        </div>
+    </form>
+</div>
+
+@if (!Model.TeamMembers.Any())
+{
+    <div class="tc">
+        <div class="empty-state">
+            <i class="bi bi-people"></i>
+            <h6>No Team Members Found</h6>
+            <p>No employees match your current search or filter.</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="team-grid">
+        @foreach (var member in Model.TeamMembers)
+        {
+            int total = member.TotalSubmitted;
+            double appPct = total > 0 ? (double)member.ApprovedCount / total * 100 : 0;
+            double penPct = total > 0 ? (double)member.PendingCount / total * 100 : 0;
+            double rejPct = total > 0 ? (double)member.RejectedCount / total * 100 : 0;
+            <div class="tcard">
+                <div class="tcard-header">
+                    <div class="tcard-av">@member.AvatarInitials</div>
+                    <div style="flex:1;min-width:0">
+                        <h6 class="tcard-name">@member.FullName</h6>
+                        <p class="tcard-dept">@member.Department</p>
+                        <span class="dept-pill">@member.Department</span>
+                    </div>
+                    @if (member.PendingCount > 0)
+                    {
+                        <span class="pending-badge">@member.PendingCount</span>
+                    }
+                </div>
+                <div class="tcard-contact">
+                    @if (!string.IsNullOrEmpty(member.Email))
+                    {
+                        <a href="mailto:@member.Email" class="contact-item"><i class="bi bi-envelope"></i>@member.Email</a>
+                    }
+                    @if (!string.IsNullOrEmpty(member.PhoneNumber))
+                    {
+                        <a href="tel:@member.PhoneNumber" class="contact-item"><i class="bi bi-telephone"></i>@member.PhoneNumber</a>
+                    }
+                </div>
+                <div class="tcard-stats">
+                    <div class="tstat">
+                        <div class="tstat-val" style="color:var(--ink-2)">@member.TotalSubmitted</div>
+                        <div class="tstat-lbl">Total</div>
+                    </div>
+                    <div class="tstat">
+                        <div class="tstat-val" style="color:var(--amber)">@member.PendingCount</div>
+                        <div class="tstat-lbl">Pending</div>
+                    </div>
+                    <div class="tstat">
+                        <div class="tstat-val" style="color:var(--green)">@member.ApprovedCount</div>
+                        <div class="tstat-lbl">Approved</div>
+                    </div>
+                    <div class="tstat">
+                        <div class="tstat-val" style="color:var(--red)">@member.RejectedCount</div>
+                        <div class="tstat-lbl">Rejected</div>
+                    </div>
+                </div>
+                @if (total > 0)
+                {
+                    <div class="tcard-progress">
+                        <div class="prog-track">
+                            <div class="prog-seg" style="width:@appPct%;background:var(--green)"></div>
+                            <div class="prog-seg" style="width:@penPct%;background:var(--amber)"></div>
+                            <div class="prog-seg" style="width:@rejPct%;background:var(--red)"></div>
+                        </div>
+                    </div>
+                }
+                <div class="tcard-footer">
+                    <span><i class="bi bi-currency-dollar me-1"></i>&#8369;@member.TotalAmountSubmitted.ToString("N0") submitted</span>
+                    @if (member.LastSubmittedDate.HasValue)
+                    {
+                        <span>Last: @member.LastSubmittedDate.Value.ToString("MMM d")</span>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="tc" id="summaryTable" style="display:none">
+        <div class="tc-head">
+            <h6 class="tc-title"><i class="bi bi-table"></i> Team Summary Table</h6>
+        </div>
+        <div style="overflow-x:auto">
+            <table class="dt">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Department</th>
+                        <th>Contact</th>
+                        <th style="text-align:center">Total</th>
+                        <th style="text-align:center">Pending</th>
+                        <th style="text-align:center">Approved</th>
+                        <th style="text-align:center">Rejected</th>
+                        <th>Total Amount</th>
+                        <th>Last Activity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var member in Model.TeamMembers)
+                    {
+                        <tr>
+                            <td>
+                                <div class="emp-cell">
+                                    <div class="av-blue">@member.AvatarInitials</div>
+                                    <span class="emp-name">@member.FullName</span>
+                                </div>
+                            </td>
+                            <td><span class="dept-pill">@member.Department</span></td>
+                            <td class="muted-sm">@member.Email</td>
+                            <td style="text-align:center">@member.TotalSubmitted</td>
+                            <td style="text-align:center">
+                                @if (member.PendingCount > 0)
+                                {
+                                    <span class="b-warn">@member.PendingCount</span>
+                                }
+                                else
+                                {
+
+                                    <span class="muted-sm">0</span>
+                                }
+                            </td>
+                            <td style="text-align:center;color:var(--green);font-weight:700">@member.ApprovedCount</td>
+                            <td style="text-align:center;color:var(--red);font-weight:700">@member.RejectedCount</td>
+                            <td style="font-weight:700">&#8369;@member.TotalAmountSubmitted.ToString("N2")</td>
+                            <td class="muted-sm">
+                                @(member.LastSubmittedDate.HasValue? member.LastSubmittedDate.Value.ToString("MMM d, yyyy") : "No activity")
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        function checkWidth() {
+            var t = document.getElementById('summaryTable');
+            if (t) t.style.display = window.innerWidth >= 1200 ? 'block' : 'none';
+        }
+        checkWidth();
+        window.addEventListener('resize', checkWidth);
+    </script>
+}

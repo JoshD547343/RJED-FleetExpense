@@ -1,0 +1,514 @@
+﻿@model IEnumerable<RJED_FleetExpense.Models.Expense>
+
+@{
+    ViewData["Title"] = "Expense History";
+    Layout = "~/Views/Shared/_LayoutEmployee.cshtml";
+}
+
+<style>
+    .stat-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 1.25rem 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border-left: 4px solid transparent;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+        }
+
+        .stat-card.green {
+            border-left-color: #4caf50;
+        }
+
+        .stat-card.blue {
+            border-left-color: #2196f3;
+        }
+
+        .stat-card.orange {
+            border-left-color: #ff9800;
+        }
+
+        .stat-card.red {
+            border-left-color: #f44336;
+        }
+
+    .stat-label {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6c757d;
+        font-weight: 600;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #14294f;
+        margin: 0.25rem 0 0;
+    }
+
+    .stat-icon {
+        font-size: 1.8rem;
+        opacity: 0.15;
+    }
+
+    .filter-bar {
+        background: #fff;
+        border-radius: 12px;
+        padding: 1.25rem 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        margin-bottom: 1.5rem;
+    }
+
+    .table-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        overflow: hidden;
+    }
+
+        .table-card .table-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .table-card .table-header h5 {
+                font-weight: 700;
+                color: #14294f;
+                margin: 0;
+                font-size: 1rem;
+            }
+
+    .table {
+        margin: 0;
+    }
+
+        .table thead th {
+            background: #f8f9fa;
+            color: #6c757d;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+            padding: 0.85rem 1.25rem;
+            border-bottom: 1px solid #e9ecef;
+            white-space: nowrap;
+        }
+
+        .table tbody td {
+            padding: 1rem 1.25rem;
+            vertical-align: middle;
+            border-bottom: 1px solid #f5f5f5;
+            font-size: 0.9rem;
+            color: #343a40;
+        }
+
+        .table tbody tr:hover {
+            background: #f8fbff;
+        }
+
+        .table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+    .badge-status {
+        padding: 0.35em 0.85em;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+    }
+
+    .badge-approved {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .badge-pending {
+        background: #fff3e0;
+        color: #e65100;
+    }
+
+    .badge-rejected {
+        background: #ffebee;
+        color: #c62828;
+    }
+
+    .amount {
+        font-weight: 700;
+        color: #14294f;
+        font-family: 'Courier New', monospace;
+    }
+
+    .btn-view {
+        background: #e8f0fe;
+        color: #1a56db;
+        border: none;
+        border-radius: 6px;
+        padding: 0.3rem 0.75rem;
+        font-size: 0.82rem;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+
+        .btn-view:hover {
+            background: #1a56db;
+            color: white;
+        }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #9e9e9e;
+    }
+
+        .empty-state i {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+</style>
+
+<div class="container-fluid py-4">
+
+    <!-- Page Header -->
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h3 class="mb-0 fw-bold">
+                <i class="bi bi-clock-history me-2 text-primary"></i>
+                Expense History
+            </h3>
+            <small class="text-muted">View and track all your submitted expense requests.</small>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card green d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Total Approved</div>
+                    <div class="stat-value">₱ @String.Format("{0:N2}", ViewBag.TotalApproved ?? 0m)</div>
+                </div>
+                <i class="bi bi-check-circle stat-icon text-success"></i>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card orange d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Pending</div>
+                    <div class="stat-value">₱ @String.Format("{0:N2}", ViewBag.TotalPending ?? 0m)</div>
+                </div>
+                <i class="bi bi-hourglass-split stat-icon text-warning"></i>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card red d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Rejected</div>
+                    <div class="stat-value">₱ @String.Format("{0:N2}", ViewBag.TotalRejected ?? 0m)</div>
+                </div>
+                <i class="bi bi-x-circle stat-icon text-danger"></i>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card blue d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Total Submitted</div>
+                    <div class="stat-value">@(ViewBag.TotalSubmitted ?? 0)</div>
+                </div>
+                <i class="bi bi-receipt stat-icon text-primary"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <form method="get" asp-controller="EmployeeDashboard" asp-action="History">
+            <div class="row g-3 align-items-end">
+
+                <div class="col-md-3">
+                    <label class="form-label stat-label">Search</label>
+                    <input type="text" name="search" class="form-control"
+                           placeholder="Search description or type..."
+                           value="@ViewBag.Search" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label stat-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Status</option>
+                        @if (ViewBag.Status == "Approved")
+                        {
+                            <option value="Approved" selected="selected">Approved</option>
+                        }
+                        else
+                        {
+                            <option value="Approved">Approved</option>
+                        }
+                        @if (ViewBag.Status == "Pending")
+                        {
+                            <option value="Pending" selected="selected">Pending</option>
+                        }
+                        else
+                        {
+                            <option value="Pending">Pending</option>
+                        }
+                        @if (ViewBag.Status == "Rejected")
+                        {
+                            <option value="Rejected" selected="selected">Rejected</option>
+                        }
+                        else
+                        {
+                            <option value="Rejected">Rejected</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label stat-label">Category</label>
+                    <select name="category" class="form-select">
+                        <option value="">All Categories</option>
+                        @if (ViewBag.Category == "Fuel")
+                        {
+                            <option value="Fuel" selected="selected">Fuel</option>
+                        }
+                        else
+                        {
+                            <option value="Fuel">Fuel</option>
+                        }
+                        @if (ViewBag.Category == "Toll")
+                        {
+                            <option value="Toll" selected="selected">Toll</option>
+                        }
+                        else
+                        {
+                            <option value="Toll">Toll</option>
+                        }
+                        @if (ViewBag.Category == "Maintenance")
+                        {
+                            <option value="Maintenance" selected="selected">Maintenance</option>
+                        }
+                        else
+                        {
+                            <option value="Maintenance">Maintenance</option>
+                        }
+                        @if (ViewBag.Category == "Meals")
+                        {
+                            <option value="Meals" selected="selected">Meals</option>
+                        }
+                        else
+                        {
+                            <option value="Meals">Meals</option>
+                        }
+                        @if (ViewBag.Category == "Travel")
+                        {
+                            <option value="Travel" selected="selected">Travel</option>
+                        }
+                        else
+                        {
+                            <option value="Travel">Travel</option>
+                        }
+                        @if (ViewBag.Category == "Supplies")
+                        {
+                            <option value="Supplies" selected="selected">Supplies</option>
+                        }
+                        else
+                        {
+                            <option value="Supplies">Supplies</option>
+                        }
+                        @if (ViewBag.Category == "Other")
+                        {
+                            <option value="Other" selected="selected">Other</option>
+                        }
+                        else
+                        {
+                            <option value="Other">Other</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label stat-label">Date From</label>
+                    <input type="date" name="dateFrom" class="form-control" value="@ViewBag.DateFrom" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label stat-label">Date To</label>
+                    <input type="date" name="dateTo" class="form-control" value="@ViewBag.DateTo" />
+                </div>
+
+                <div class="col-md-1 d-flex gap-2">
+                    <button type="submit" class="btn btn-dark w-100" title="Search">
+                        <i class="bi bi-search"></i>
+                    </button>
+                    <a href="@Url.Action("History", "EmployeeDashboard")" class="btn btn-outline-secondary w-100" title="Reset">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </a>
+                </div>
+
+            </div>
+        </form>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card">
+        <div class="table-header">
+            <h5><i class="bi bi-table me-2"></i>Expense Records</h5>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th>Vehicle</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Submitted</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        int counter = 1;
+                        @foreach (var expense in Model)
+                        {
+                            <tr>
+                                <td class="text-muted">@counter.ToString("D3")</td>
+                                <td>@expense.ExpenseDate.ToString("MMM dd, yyyy")</td>
+                                <td><span class="badge bg-light text-dark border">@expense.ExpenseType</span></td>
+                                <td>@(expense.Description ?? "—")</td>
+                                <td>@(string.IsNullOrEmpty(expense.PlateNumber) ? "—" : expense.PlateNumber)</td>
+                                <td class="amount">₱ @expense.Amount.ToString("N2")</td>
+                                <td>
+                                    @if (expense.Status == "Approved")
+                                    {
+                                        <span class="badge-status badge-approved">Approved</span>
+                                    }
+                                    else if (expense.Status == "Rejected")
+                                    {
+                                        <span class="badge-status badge-rejected">Rejected</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge-status badge-pending">Pending</span>
+                                    }
+                                </td>
+                                <td class="text-muted small">@expense.DateSubmitted.ToString("MMM dd, yyyy")</td>
+                                <td>
+                                    <button class="btn-view"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#viewDetailModal"
+                                            data-type="@expense.ExpenseType"
+                                            data-amount="@expense.Amount.ToString("N2")"
+                                            data-date="@expense.ExpenseDate.ToString("MMM dd, yyyy")"
+                                            data-plate="@(expense.PlateNumber ?? "—")"
+                                            data-desc="@(expense.Description ?? "—")"
+                                            data-status="@expense.Status"
+                                            data-submitted="@expense.DateSubmitted.ToString("MMM dd, yyyy hh:mm tt")">
+                                        <i class="bi bi-eye me-1"></i>View
+                                    </button>
+                                </td>
+                            </tr>
+                            counter++;
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="9">
+                                <div class="empty-state">
+                                    <i class="bi bi-inbox d-block"></i>
+                                    <p class="mb-0">No expense records found.</p>
+                                    <small class="text-muted">Try adjusting your filters or submit a new expense.</small>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+            <small class="text-muted">
+                Showing @(Model?.Count() ?? 0) record(s)
+            </small>
+        </div>
+    </div>
+
+</div>
+
+<!-- View Detail Modal -->
+<div class="modal fade" id="viewDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-receipt me-2"></i> Expense Detail
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Type</dt>
+                    <dd class="col-sm-8" id="d-type"></dd>
+
+                    <dt class="col-sm-4">Amount</dt>
+                    <dd class="col-sm-8 fw-bold" id="d-amount"></dd>
+
+                    <dt class="col-sm-4">Expense Date</dt>
+                    <dd class="col-sm-8" id="d-date"></dd>
+
+                    <dt class="col-sm-4">Vehicle</dt>
+                    <dd class="col-sm-8" id="d-plate"></dd>
+
+                    <dt class="col-sm-4">Description</dt>
+                    <dd class="col-sm-8" id="d-desc"></dd>
+
+                    <dt class="col-sm-4">Status</dt>
+                    <dd class="col-sm-8" id="d-status"></dd>
+
+                    <dt class="col-sm-4">Submitted</dt>
+                    <dd class="col-sm-8" id="d-submitted"></dd>
+                </dl>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('viewDetailModal')?.addEventListener('show.bs.modal', function (event) {
+            const btn = event.relatedTarget;
+            document.getElementById('d-type').textContent      = btn.dataset.type;
+            document.getElementById('d-amount').textContent    = '₱ ' + btn.dataset.amount;
+            document.getElementById('d-date').textContent      = btn.dataset.date;
+            document.getElementById('d-plate').textContent     = btn.dataset.plate;
+            document.getElementById('d-desc').textContent      = btn.dataset.desc;
+            document.getElementById('d-submitted').textContent = btn.dataset.submitted;
+
+            const statusEl = document.getElementById('d-status');
+            const status = btn.dataset.status;
+            const cls = status === 'Approved' ? 'badge-approved'
+                      : status === 'Rejected' ? 'badge-rejected'
+                      : 'badge-pending';
+            statusEl.innerHTML = `<span class="badge-status ${cls}">${status}</span>`;
+        });
+    </script>
+}

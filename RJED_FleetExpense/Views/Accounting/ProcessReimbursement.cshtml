@@ -1,0 +1,832 @@
+﻿@model RJED_FleetExpense.Models.ProcessReimbursementViewModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "Process Reimbursement";
+    Layout = "~/Views/Shared/_LayoutAccounting.cshtml";
+
+    var peso = CultureInfo.GetCultureInfo("en-US");
+    var from = Model.DateFrom?.ToString("yyyy-MM-dd");
+    var to = Model.DateTo?.ToString("yyyy-MM-dd");
+    var today = DateTime.Now.ToString("yyyy-MM-dd");
+}
+
+@section Styles {
+    <style>
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.4rem;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 4px solid transparent;
+            border-radius: 12px;
+            padding: 1.05rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            opacity: 0;
+            transform: translateY(10px);
+            animation: rise 0.38s ease forwards;
+        }
+
+            .stat-card:nth-child(1) {
+                border-left-color: #3b82f6;
+                animation-delay: 0s;
+            }
+
+            .stat-card:nth-child(2) {
+                border-left-color: #ca8a04;
+                animation-delay: 0.06s;
+            }
+
+            .stat-card:nth-child(3) {
+                border-left-color: var(--green);
+                animation-delay: 0.12s;
+            }
+
+        .stat-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .stat-label {
+            font-size: 0.68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .stat-sub {
+            font-size: 0.7rem;
+            color: var(--muted);
+        }
+
+        .stat-value {
+            margin-left: auto;
+            text-align: right;
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1.1;
+        }
+
+        /* Panels */
+        .sc {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            margin-bottom: 1.4rem;
+        }
+
+        .sc-body {
+            padding: 1rem 1.2rem;
+        }
+
+        /* Filter toolbar */
+        .toolbar {
+            display: flex;
+            gap: .85rem;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+            .toolbar .field {
+                display: flex;
+                flex-direction: column;
+                min-width: 160px;
+            }
+
+                .toolbar .field.grow {
+                    flex: 1;
+                    min-width: 220px;
+                }
+
+            .toolbar label, .field-group label {
+                font-size: .68rem;
+                font-weight: 600;
+                color: var(--muted);
+                text-transform: uppercase;
+                letter-spacing: .6px;
+                margin-bottom: 4px;
+            }
+
+            .toolbar input, .field-group input {
+                border: 1.5px solid var(--border);
+                border-radius: 8px;
+                padding: 7px 11px;
+                font-size: .84rem;
+                color: var(--text);
+                background: #fff;
+                outline: none;
+                width: 100%;
+            }
+
+                .toolbar input:focus, .field-group input:focus {
+                    border-color: var(--ink-2);
+                }
+
+        .field-group {
+            margin-bottom: 1rem;
+        }
+
+            .field-group input[readonly] {
+                background: var(--slate);
+                color: var(--muted);
+            }
+
+        .field-hint {
+            font-size: .72rem;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        .btn-filter {
+            background: var(--ink);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: .82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-reset {
+            color: var(--muted);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 7px 14px;
+            font-size: .82rem;
+            font-weight: 600;
+            text-decoration: none;
+            background: var(--slate);
+        }
+
+            .btn-reset:hover {
+                color: var(--ink);
+                border-color: var(--ink-2);
+            }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: .25rem;
+            padding: 0 1.1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: .9rem .9rem .75rem;
+            font-size: .86rem;
+            font-weight: 600;
+            color: var(--muted);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+            .tab-btn:hover {
+                color: var(--ink);
+            }
+
+            .tab-btn.active {
+                color: var(--ink);
+                border-bottom-color: var(--green);
+            }
+
+        .tab-count {
+            background: var(--slate);
+            color: var(--ink);
+            border-radius: 20px;
+            font-size: .7rem;
+            padding: 1px 9px;
+        }
+
+        .tab-btn.active .tab-count {
+            background: #ecfdf5;
+            color: #065f46;
+        }
+
+        .pane-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            padding: .8rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .range-label {
+            font-size: .78rem;
+            color: var(--muted);
+        }
+
+        .btn-bulk {
+            background: var(--ink);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 7px 14px;
+            font-size: .82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+            .btn-bulk:disabled {
+                opacity: .45;
+                cursor: not-allowed;
+            }
+
+        /* Tables */
+        .table-scroll {
+            overflow-x: auto;
+        }
+
+        .ex-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .ex-table thead th {
+                background: #f8faff;
+                color: var(--muted);
+                font-size: 0.66rem;
+                text-transform: uppercase;
+                letter-spacing: .6px;
+                padding: 0.7rem 1rem;
+                text-align: left;
+                white-space: nowrap;
+            }
+
+            .ex-table tbody td {
+                padding: 0.78rem 1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: .84rem;
+                vertical-align: middle;
+            }
+
+            .ex-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .ex-table tbody tr:hover {
+                background: #f8faff;
+            }
+
+            .ex-table .check-col {
+                width: 44px;
+                text-align: center;
+            }
+
+            .ex-table input[type=checkbox] {
+                width: 16px;
+                height: 16px;
+                accent-color: var(--ink);
+                cursor: pointer;
+            }
+
+        .amt {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-weight: 700;
+            color: var(--ink);
+            white-space: nowrap;
+        }
+
+        .who {
+            font-weight: 600;
+            color: var(--ink);
+        }
+
+        .nowrap {
+            white-space: nowrap;
+            color: var(--muted);
+            font-size: .8rem;
+        }
+
+        .ref-code {
+            font-family: 'Consolas', monospace;
+            background: #f1f5f9;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: .78rem;
+            color: var(--ink);
+        }
+
+        .btn-pay {
+            background: var(--green);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 5px 12px;
+            font-size: .76rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+
+            .btn-pay:hover {
+                opacity: .9;
+            }
+
+        .btn-ghost {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1.5px solid var(--border);
+            background: var(--slate);
+            color: var(--muted);
+            font-size: .76rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+            .btn-ghost:hover {
+                color: var(--ink);
+                border-color: var(--ink-2);
+            }
+
+        .empty-box {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--muted);
+        }
+
+            .empty-box i {
+                font-size: 2rem;
+                opacity: .25;
+                display: block;
+                margin-bottom: .5rem;
+            }
+
+            .empty-box p {
+                font-weight: 600;
+                margin-bottom: .2rem;
+                color: var(--text);
+            }
+
+        /* Modals */
+        .modal-content {
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: var(--ink);
+            border-bottom: none;
+            padding: 1rem 1.3rem;
+        }
+
+        .modal-title {
+            color: #fff;
+            font-size: .95rem;
+            font-weight: 700;
+        }
+
+        .modal-body {
+            padding: 1.3rem;
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--border);
+            padding: .85rem 1.3rem;
+            gap: .5rem;
+        }
+
+        .pay-summary {
+            background: var(--slate);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: .8rem 1rem;
+            margin-bottom: 1.1rem;
+        }
+
+            .pay-summary strong {
+                color: var(--ink);
+            }
+
+            .pay-summary small {
+                color: var(--muted);
+                display: block;
+            }
+
+        .btn-confirm {
+            background: var(--ink);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-size: .84rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+            .btn-confirm:hover {
+                opacity: .9;
+            }
+
+        .btn-cancel {
+            background: var(--slate);
+            color: var(--muted);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 7px 16px;
+            font-size: .84rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+            .btn-cancel:hover {
+                color: var(--ink);
+            }
+
+        @@keyframes rise {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@media (max-width: 992px) {
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+}
+
+<!-- Stat Cards -->
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#f0f9ff;color:#3b82f6"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+            <div class="stat-label">Awaiting Payment</div>
+            <div class="stat-sub">Approved by department heads</div>
+        </div>
+        <div class="stat-value">@Model.PayableCount</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fefce8;color:#ca8a04"><i class="bi bi-wallet2"></i></div>
+        <div>
+            <div class="stat-label">Amount to Pay</div>
+            <div class="stat-sub">Total of unpaid approved claims</div>
+        </div>
+        <div class="stat-value">&#8369;@Model.PayableAmount.ToString("N2", peso)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#ecfdf5;color:var(--green)"><i class="bi bi-cash-coin"></i></div>
+        <div>
+            <div class="stat-label">Paid This Month</div>
+            <div class="stat-sub">@Model.PaidThisMonthCount payment(s)</div>
+        </div>
+        <div class="stat-value">&#8369;@Model.PaidThisMonth.ToString("N2", peso)</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="sc">
+    <div class="sc-body">
+        <form method="get" asp-action="ProcessReimbursement" class="toolbar">
+            <input type="hidden" name="tab" id="tabField" value="@Model.Tab" />
+            <div class="field grow">
+                <label for="search">Search</label>
+                <input type="text" id="search" name="search" placeholder="Employee name or reference no." value="@Model.Search" />
+            </div>
+            <div class="field">
+                <label for="dateFrom">Date from</label>
+                <input type="date" id="dateFrom" name="dateFrom" value="@from" />
+            </div>
+            <div class="field">
+                <label for="dateTo">Date to</label>
+                <input type="date" id="dateTo" name="dateTo" value="@to" />
+            </div>
+            <button type="submit" class="btn-filter"><i class="bi bi-funnel"></i> Filter</button>
+            <a asp-action="ProcessReimbursement" class="btn-reset">Reset</a>
+        </form>
+    </div>
+</div>
+
+<div class="sc">
+    <div class="tabs">
+        <button type="button" class="tab-btn" data-tab="pending">
+            <i class="bi bi-hourglass-split"></i> Awaiting payment <span class="tab-count">@Model.Payable.Count</span>
+        </button>
+        <button type="button" class="tab-btn" data-tab="history">
+            <i class="bi bi-clock-history"></i> Payment history <span class="tab-count">@Model.History.Count</span>
+        </button>
+    </div>
+
+    @* ================= AWAITING PAYMENT ================= *@
+    <div class="pane" id="pane-pending">
+        @if (Model.Payable.Any())
+        {
+            <div class="pane-bar">
+                <span class="range-label">Oldest submissions first. Tick several to pay them in one PayMongo checkout.</span>
+                <button type="button" class="btn-bulk" id="bulkBtn" data-bs-toggle="modal" data-bs-target="#bulkModal" disabled>
+                    <i class="bi bi-check2-all"></i> Pay selected (<span id="selectedCount">0</span>)
+                </button>
+            </div>
+            <div class="table-scroll">
+                <table class="ex-table">
+                    <thead>
+                        <tr>
+                            <th class="check-col"><input type="checkbox" id="selectAll" aria-label="Select all" /></th>
+                            <th>Employee</th>
+                            <th>Category</th>
+                            <th>Expense date</th>
+                            <th>Submitted</th>
+                            <th>Amount</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Model.Payable)
+                        {
+                            <tr>
+                                <td class="check-col">
+                                    <input type="checkbox" class="row-check" value="@r.ExpenseId"
+                                           data-amount="@r.Amount.ToString("0.00", CultureInfo.InvariantCulture)"
+                                           aria-label="Select expense @r.ExpenseId" />
+                                </td>
+                                <td class="who">@r.EmployeeName</td>
+                                <td>@r.Category</td>
+                                <td class="nowrap">@(r.ExpenseDate?.ToString("MMM dd, yyyy") ?? "—")</td>
+                                <td class="nowrap">@(r.DateSubmitted?.ToString("MMM dd, yyyy") ?? "—")</td>
+                                <td class="amt">&#8369;@r.Amount.ToString("N2", peso)</td>
+                                <td style="text-align:right;">
+                                    <button type="button" class="btn-pay" data-bs-toggle="modal" data-bs-target="#payModal"
+                                            data-id="@r.ExpenseId"
+                                            data-who="@r.EmployeeName"
+                                            data-category="@r.Category"
+                                            data-amount="@r.Amount.ToString("0.00", CultureInfo.InvariantCulture)">
+                                        <i class="bi bi-lightning-charge"></i> Pay
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-box">
+                <i class="bi bi-inbox"></i>
+                <p>Nothing is waiting for payment</p>
+                <small>Expenses show up here as soon as a department head approves them.</small>
+            </div>
+        }
+    </div>
+
+    @* ================= PAYMENT HISTORY ================= *@
+    <div class="pane" id="pane-history">
+        @if (Model.History.Any())
+        {
+            <div class="pane-bar">
+                <span class="range-label">Latest 100 payments. Use Edit to correct a reference number or date.</span>
+            </div>
+            <div class="table-scroll">
+                <table class="ex-table">
+                    <thead>
+                        <tr>
+                            <th>Paid on</th>
+                            <th>Employee</th>
+                            <th>Category</th>
+                            <th>Reference no.</th>
+                            <th>Amount</th>
+                            <th>Processed by</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var h in Model.History)
+                        {
+                            <tr>
+                                <td class="nowrap">@h.PaymentDate.ToString("MMM dd, yyyy")</td>
+                                <td class="who">@h.EmployeeName</td>
+                                <td>@h.Category</td>
+                                <td><span class="ref-code">@(h.TransactionRef ?? "—")</span></td>
+                                <td class="amt">&#8369;@h.AmountPaid.ToString("N2", peso)</td>
+                                <td>@h.ProcessedByName</td>
+                                <td style="text-align:right;">
+                                    <button type="button" class="btn-ghost" data-bs-toggle="modal" data-bs-target="#editModal"
+                                            data-id="@h.ReimbursementId"
+                                            data-who="@h.EmployeeName"
+                                            data-ref="@h.TransactionRef"
+                                            data-date="@h.PaymentDate.ToString("yyyy-MM-dd")">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-box">
+                <i class="bi bi-credit-card"></i>
+                <p>No payments found</p>
+                <small>Payments you process will be listed here.</small>
+            </div>
+        }
+    </div>
+</div>
+
+@* ================= PAY ONE (PayMongo only) ================= *@
+<div class="modal fade" id="payModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" asp-action="ProcessReimbursement">
+            <div class="modal-header">
+                <h6 class="modal-title">Pay reimbursement</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="expenseId" id="payExpenseId" />
+                <input type="hidden" name="method" value="paymongo" />
+
+                <div class="pay-summary">
+                    <strong id="payWho"></strong>
+                    <small id="payCategory"></small>
+                </div>
+
+                <div class="field-group">
+                    <label for="payAmount">Amount to pay (&#8369;)</label>
+                    <input type="number" id="payAmount" name="amountPaid" step="0.01" readonly />
+                    <div class="field-hint">Matches the approved claim amount.</div>
+                </div>
+
+                <div class="pay-summary mb-0">
+                    <strong><i class="bi bi-lightning-charge"></i> Paid through PayMongo</strong>
+                    <small>You will be redirected to PayMongo's secure checkout to complete the payment. The reference number is assigned by PayMongo and recorded automatically once the payment is confirmed.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn-confirm"><i class="bi bi-lightning-charge"></i> Continue to PayMongo</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* ================= PAY SELECTED (PayMongo only) ================= *@
+<div class="modal fade" id="bulkModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" asp-action="BulkReimburse">
+            <div class="modal-header">
+                <h6 class="modal-title">Pay selected expenses</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="bulkIds"></div>
+                <input type="hidden" name="method" value="paymongo" />
+
+                <div class="pay-summary">
+                    <strong><span id="bulkCount">0</span> expense(s)</strong>
+                    <small>Total <span id="bulkTotal"></span></small>
+                </div>
+
+                <div class="pay-summary mb-0">
+                    <strong><i class="bi bi-lightning-charge"></i> Paid through PayMongo</strong>
+                    <small>All selected expenses are paid in one PayMongo checkout for the total amount. Each expense is recorded under the reference number PayMongo assigns once the payment is confirmed.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn-confirm"><i class="bi bi-lightning-charge"></i> Continue to PayMongo</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* ================= EDIT PAYMENT ================= *@
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" asp-action="UpdatePayment">
+            <div class="modal-header">
+                <h6 class="modal-title">Edit payment details</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="reimbursementId" id="editId" />
+                <div class="pay-summary"><strong id="editWho"></strong></div>
+                <div class="field-group">
+                    <label for="editRef">Transaction / reference no.</label>
+                    <input type="text" id="editRef" name="transactionRef" maxlength="50" required />
+                </div>
+                <div class="field-group mb-0">
+                    <label for="editDate">Payment date</label>
+                    <input type="date" id="editDate" name="paymentDate" max="@today" required />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn-confirm"><i class="bi bi-floppy"></i> Save changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const money = n => '₱' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            // ---------- Tabs ----------
+            const tabField = document.getElementById('tabField');
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            function showTab(name) {
+                tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+                document.querySelectorAll('.pane').forEach(p => p.hidden = p.id !== 'pane-' + name);
+                tabField.value = name;
+            }
+            tabBtns.forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+            showTab('@Model.Tab');
+
+            // ---------- Pay one ----------
+            document.getElementById('payModal').addEventListener('show.bs.modal', e => {
+                const b = e.relatedTarget;
+                document.getElementById('payExpenseId').value = b.dataset.id;
+                document.getElementById('payWho').textContent = b.dataset.who;
+                document.getElementById('payCategory').textContent = b.dataset.category;
+                document.getElementById('payAmount').value = b.dataset.amount;
+            });
+
+            // ---------- Pay selected ----------
+            const checks = document.querySelectorAll('.row-check');
+            const selectAll = document.getElementById('selectAll');
+            const bulkBtn = document.getElementById('bulkBtn');
+            const selectedCount = document.getElementById('selectedCount');
+            const selected = () => Array.from(document.querySelectorAll('.row-check:checked'));
+
+            function updateBulk() {
+                const n = selected().length;
+                if (selectedCount) selectedCount.textContent = n;
+                if (bulkBtn) bulkBtn.disabled = n === 0;
+                if (selectAll) selectAll.checked = n > 0 && n === checks.length;
+            }
+            checks.forEach(c => c.addEventListener('change', updateBulk));
+            if (selectAll) selectAll.addEventListener('change', () => {
+                checks.forEach(c => c.checked = selectAll.checked);
+                updateBulk();
+            });
+
+            document.getElementById('bulkModal').addEventListener('show.bs.modal', () => {
+                const sel = selected();
+                const total = sel.reduce((s, c) => s + Number(c.dataset.amount), 0);
+                document.getElementById('bulkCount').textContent = sel.length;
+                document.getElementById('bulkTotal').textContent = money(total);
+                const holder = document.getElementById('bulkIds');
+                holder.innerHTML = '';
+                sel.forEach(c => {
+                    const i = document.createElement('input');
+                    i.type = 'hidden'; i.name = 'expenseIds'; i.value = c.value;
+                    holder.appendChild(i);
+                });
+            });
+
+            // ---------- Edit payment ----------
+            document.getElementById('editModal').addEventListener('show.bs.modal', e => {
+                const b = e.relatedTarget;
+                document.getElementById('editId').value = b.dataset.id;
+                document.getElementById('editWho').textContent = b.dataset.who;
+                document.getElementById('editRef').value = b.dataset.ref || '';
+                document.getElementById('editDate').value = b.dataset.date;
+            });
+        })();
+    </script>
+}

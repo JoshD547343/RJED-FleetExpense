@@ -1,0 +1,321 @@
+﻿@model RJED_FleetExpense.Models.Expense
+@{
+    ViewData["Title"] = "Expense Details";
+    Layout = "~/Views/Shared/_LayoutSupervisor.cshtml";
+
+    var name = Model.User?.FullName ?? Model.User?.UserName ?? "Unknown";
+    var dept = Model.User?.Department ?? "—";
+    var email = Model.User?.Email ?? "—";
+    var initial = name.Length > 0 ? name[0].ToString().ToUpper() : "?";
+    var vehicleType = ViewBag.VehicleType as string;
+    var isPending = Model.Status == "Pending";
+    var isRejected = Model.Status == "Rejected";
+}
+
+@section Styles {
+    <style>
+        .dh {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.4rem;
+        }
+
+            .dh h4 {
+                font-family: 'Familjen Grotesk',sans-serif;
+                font-weight: 800;
+                color: var(--ink);
+                margin: 0 0 3px;
+            }
+
+        .dcard {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.3rem 1.5rem;
+            margin-bottom: 1.1rem;
+        }
+
+            .dcard h6 {
+                font-family: 'Familjen Grotesk',sans-serif;
+                font-weight: 700;
+                color: var(--ink);
+                margin: 0 0 1rem;
+                padding-bottom: .6rem;
+                border-bottom: 1px solid var(--border);
+            }
+
+        .dgrid {
+            display: grid;
+            grid-template-columns: 150px 1fr;
+            gap: .7rem .75rem;
+            font-size: .865rem;
+        }
+
+            .dgrid dt {
+                color: var(--muted);
+                font-size: .72rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: .4px;
+                padding-top: 2px;
+            }
+
+            .dgrid dd {
+                margin: 0;
+                color: var(--text);
+                font-weight: 500;
+            }
+
+        .big-amt {
+            font-family: 'Familjen Grotesk',sans-serif;
+            font-size: 1.9rem;
+            font-weight: 800;
+            color: var(--ink);
+        }
+
+        .av {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: #fff7ed;
+            border: 1.5px solid #fed7aa;
+            color: #9a3412;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .bdg {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            border-radius: 20px;
+            font-size: .72rem;
+            font-weight: 700;
+            padding: 3px 11px;
+            border: 1px solid;
+        }
+
+        .bdg-pending {
+            background: #fff7ed;
+            color: #9a3412;
+            border-color: #fed7aa;
+        }
+
+        .bdg-ok {
+            background: #ecfdf5;
+            color: #15803d;
+            border-color: #bbf7d0;
+        }
+
+        .bdg-rej {
+            background: #fef2f2;
+            color: #b91c1c;
+            border-color: #fecaca;
+        }
+
+        .plate {
+            font-family: 'Familjen Grotesk',sans-serif;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            background: var(--slate);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 3px 10px;
+        }
+
+        .btn-d {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: .5rem 1.1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: .855rem;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .btn-ok {
+            background: #10b981;
+            color: #fff;
+        }
+
+        .btn-no {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        .btn-back {
+            background: var(--slate);
+            color: var(--muted);
+            border: 1.5px solid var(--border);
+        }
+
+        .remark-box {
+            background: var(--slate);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: .75rem 1rem;
+            font-size: .85rem;
+        }
+    </style>
+}
+
+<div class="dh">
+    <div>
+        <h4>Expense #@Model.Id</h4>
+        <div style="font-size:.78rem;color:var(--muted)">Submitted @Model.DateSubmitted.ToString("MMM d, yyyy hh:mm tt")</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a asp-action="PendingExpenses" class="btn-d btn-back"><i class="bi bi-arrow-left"></i> Back</a>
+        @if (isPending)
+        {
+            <button type="button" class="btn-d btn-ok" data-bs-toggle="modal" data-bs-target="#dApproveModal">
+                <i class="bi bi-check-lg"></i> Approve
+            </button>
+            <button type="button" class="btn-d btn-no" data-bs-toggle="modal" data-bs-target="#dRejectModal">
+                <i class="bi bi-x-lg"></i> Reject
+            </button>
+        }
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="dcard">
+            <h6><i class="bi bi-receipt"></i> Expense Information</h6>
+            <div style="text-align:center;padding:.5rem 0 1.2rem">
+                <div style="font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase">Amount</div>
+                <div class="big-amt">&#8369;@Model.Amount.ToString("N2")</div>
+                <div class="mt-2">
+                    @if (isPending)
+                    {
+                        <span class="bdg bdg-pending"><i class="bi bi-clock"></i> Pending</span>
+                    }
+                    else if (isRejected)
+                    {
+
+                        <span class="bdg bdg-rej"><i class="bi bi-x-circle-fill"></i> Rejected</span>
+                    }
+                    else
+                    {
+
+                        <span class="bdg bdg-ok"><i class="bi bi-check-circle-fill"></i> @Model.Status</span>
+                    }
+                </div>
+            </div>
+            <dl class="dgrid mb-0">
+                <dt>Type</dt>
+                <dd>@Model.ExpenseType</dd>
+                <dt>Expense Date</dt>
+                <dd>@Model.ExpenseDate.ToString("dddd, MMM d, yyyy")</dd>
+                <dt>Vehicle</dt>
+                <dd>
+                    @if (string.IsNullOrWhiteSpace(Model.PlateNumber))
+                    {
+                        <span>—</span>
+                    }
+                    else
+                    {
+                        <span class="plate">@Model.PlateNumber</span>
+                        @if (!string.IsNullOrWhiteSpace(vehicleType))
+                        {
+                            <span class="ms-2 text-muted">@vehicleType</span>
+                        }
+                    }
+                </dd>
+                <dt>Description</dt>
+                <dd style="white-space:pre-line">@(string.IsNullOrWhiteSpace(Model.Description) ? "—" : Model.Description)</dd>
+            </dl>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.SupervisorRemarks) || isRejected)
+        {
+            <div class="dcard">
+                <h6><i class="bi bi-chat-left-text"></i> Supervisor Review</h6>
+                <dl class="dgrid mb-0">
+                    @if (isRejected)
+                    {
+                        <dt>Reason</dt>
+                        <dd>@(string.IsNullOrWhiteSpace(Model.RejectionReason) ? "—" : Model.RejectionReason)</dd>
+                        <dt>Rejected On</dt>
+                        <dd>@(Model.SupervisorRejectedDate?.ToString("MMM d, yyyy hh:mm tt") ?? "—")</dd>
+                    }
+                    else if (Model.SupervisorApprovedDate != null)
+                    {
+                        <dt>Approved On</dt>
+                        <dd>@Model.SupervisorApprovedDate.Value.ToString("MMM d, yyyy hh:mm tt")</dd>
+                    }
+                    <dt>Remarks</dt>
+                    <dd><div class="remark-box">@(string.IsNullOrWhiteSpace(Model.SupervisorRemarks) ? "—" : Model.SupervisorRemarks)</div></dd>
+                </dl>
+            </div>
+        }
+    </div>
+
+    <div class="col-lg-4">
+        <div class="dcard">
+            <h6><i class="bi bi-person"></i> Submitted By</h6>
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <div class="av">@initial</div>
+                <div>
+                    <div style="font-weight:700;color:var(--ink)">@name</div>
+                    <div style="font-size:.76rem;color:var(--muted)">@dept</div>
+                </div>
+            </div>
+            <dl class="dgrid mb-0" style="grid-template-columns:80px 1fr">
+                <dt>Email</dt>
+                <dd style="word-break:break-all">@email</dd>
+            </dl>
+        </div>
+    </div>
+</div>
+
+@if (isPending)
+{
+    <div class="modal fade" id="dApproveModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form class="modal-content" method="post" asp-controller="Supervisor" asp-action="ApproveExpense" asp-route-id="@Model.Id">
+                <div class="modal-header">
+                    <h6 class="modal-title">Approve Expense #@Model.Id</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label fw-semibold">Remarks (optional)</label>
+                    <textarea name="remarks" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-d btn-ok">Approve</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal fade" id="dRejectModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form class="modal-content" method="post" asp-controller="Supervisor" asp-action="RejectExpense" asp-route-id="@Model.Id">
+                <div class="modal-header">
+                    <h6 class="modal-title">Reject Expense #@Model.Id</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label fw-semibold">Reason category</label>
+                    <input type="text" name="rejectionReason" class="form-control mb-3" placeholder="e.g. Missing receipt" />
+                    <label class="form-label fw-semibold">Remarks <span class="text-danger">*</span></label>
+                    <textarea name="remarks" class="form-control" rows="3" required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-d btn-no">Reject</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}

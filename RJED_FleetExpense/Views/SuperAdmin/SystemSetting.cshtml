@@ -1,0 +1,357 @@
+﻿@model RJED_FleetExpense.Models.SystemSettingsViewModel
+@{
+    Layout = "/Views/Shared/_Layout.cshtml";
+    var tab = Model.ActiveTab;
+}
+<div class="d-flex" style="min-height: 100vh;">
+    @* Your sidebar partial goes here, same as your other Super Admin pages *@
+
+    <!-- Main Content -->
+    <div class="flex-grow-1 p-4">
+        <h2 class="fw-bold text-primary mb-1">System Settings</h2>
+        <p class="text-muted mb-4">Company details, expense policy, security, notifications and database backups</p>
+
+        @if (TempData["Success"] is string okMsg && !string.IsNullOrEmpty(okMsg))
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i>@okMsg
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        @if (TempData["Error"] is string errMsg && !string.IsNullOrEmpty(errMsg))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-octagon-fill me-2"></i>@errMsg
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        <ul class="nav nav-tabs mb-4" id="settingsTabs" role="tablist">
+            <li class="nav-item" role="presentation"><button class="nav-link" id="general-tab" data-bs-toggle="tab" data-bs-target="#general" type="button" role="tab">General</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="expense-tab" data-bs-toggle="tab" data-bs-target="#expense" type="button" role="tab">Expense policy</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="security-tab" data-bs-toggle="tab" data-bs-target="#security" type="button" role="tab">Security</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="notifications-tab" data-bs-toggle="tab" data-bs-target="#notifications" type="button" role="tab">Notifications</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="backup-tab" data-bs-toggle="tab" data-bs-target="#backup" type="button" role="tab">Backup &amp; restore</button></li>
+        </ul>
+
+        <div class="tab-content" id="settingsTabContent">
+
+            <!-- General -->
+            <div class="tab-pane fade" id="general">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <h5 class="card-title mb-4">General settings</h5>
+                        <form method="post" asp-controller="Dashboard" asp-action="SaveGeneral">
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-medium" for="companyName">Company name</label>
+                                    <input id="companyName" asp-for="Input.CompanyName" class="form-control" maxlength="150" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-medium" for="currency">Default currency</label>
+                                    <select id="currency" asp-for="Input.Currency" class="form-select">
+                                        <option value="PHP">PHP - Philippine Peso</option>
+                                        <option value="USD">USD - US Dollar</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-medium" for="sysEmail">System email</label>
+                                    <input id="sysEmail" asp-for="Input.SystemEmail" type="email" class="form-control" />
+                                </div>
+                                <div class="col-12 mt-4"><button class="btn btn-primary px-4">Save changes</button></div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expense policy -->
+            <div class="tab-pane fade" id="expense">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <h5 class="card-title mb-4">Expense policy</h5>
+                        <form method="post" asp-controller="Dashboard" asp-action="SaveExpense">
+                            <div class="row g-4">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-medium" for="autoApprove">Auto-approve claims below</label>
+                                    <input id="autoApprove" asp-for="Input.AutoApproveBelow" type="number" step="0.01" min="0" class="form-control" />
+                                    <div class="form-text">Set to 0 to require approval for every claim.</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-medium" for="receiptAbove">Receipt required above</label>
+                                    <input id="receiptAbove" asp-for="Input.ReceiptRequiredAbove" type="number" step="0.01" min="0" class="form-control" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-medium" for="filingDays">Filing window (days)</label>
+                                    <input id="filingDays" asp-for="Input.ClaimFilingDays" type="number" min="1" max="365" class="form-control" />
+                                    <div class="form-text">How long after the expense a claim can still be filed.</div>
+                                </div>
+                                <div class="col-12 mt-4"><button class="btn btn-primary px-4">Save changes</button></div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security -->
+            <div class="tab-pane fade" id="security">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <h5 class="card-title mb-4">Security settings</h5>
+                        <form method="post" asp-controller="Dashboard" asp-action="SaveSecurity">
+                            <div class="row g-4">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-medium" for="timeout">Session timeout (minutes)</label>
+                                    <input id="timeout" asp-for="Input.SessionTimeoutMinutes" type="number" min="5" max="480" class="form-control" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-medium" for="attempts">Failed logins before lockout</label>
+                                    <input id="attempts" asp-for="Input.MaxLoginAttempts" type="number" min="3" max="10" class="form-control" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-medium" for="minPw">Minimum password length</label>
+                                    <input id="minPw" asp-for="Input.MinPasswordLength" type="number" min="6" max="32" class="form-control" />
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" asp-for="Input.RequireComplexPassword" />
+                                        <label class="form-check-label" asp-for="Input.RequireComplexPassword">Require upper, lower case, number and symbol</label>
+                                    </div>
+                                </div>
+                                <div class="col-12"><hr class="my-1"></div>
+                                <div class="col-12">
+                                    <div class="form-check form-switch mb-2">
+                                        <input class="form-check-input" asp-for="Input.MaintenanceMode" />
+                                        <label class="form-check-label fw-medium" asp-for="Input.MaintenanceMode">Maintenance mode (only admins can use the system)</label>
+                                    </div>
+                                    <label class="form-label" for="maintMsg">Message shown to other users</label>
+                                    <input id="maintMsg" asp-for="Input.MaintenanceMessage" class="form-control" maxlength="300" />
+                                </div>
+                                <div class="col-12 mt-4"><button class="btn btn-primary px-4">Save changes</button></div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="tab-pane fade" id="notifications">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <h5 class="card-title mb-4">Notification preferences</h5>
+                        <form method="post" asp-controller="Dashboard" asp-action="SaveNotifications">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" asp-for="Input.EmailOnApproval" />
+                                <label class="form-check-label" asp-for="Input.EmailOnApproval">Email on approval or rejection</label>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" asp-for="Input.SmsOnEscalation" />
+                                <label class="form-check-label" asp-for="Input.SmsOnEscalation">SMS for urgent escalations</label>
+                            </div>
+                            <button class="btn btn-primary mt-3 px-4">Save changes</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backup & restore -->
+            <div class="tab-pane fade" id="backup">
+                @if (Model.Db != null)
+                {
+                    <div class="card shadow-sm border-0 mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title mb-3">Database</h5>
+                            <dl class="row mb-0">
+                                <dt class="col-sm-3">Name</dt>
+                                <dd class="col-sm-9">@Model.Db.Database</dd>
+                                <dt class="col-sm-3">Server</dt>
+                                <dd class="col-sm-9">@Model.Db.Server</dd>
+                                <dt class="col-sm-3">Size</dt>
+                                <dd class="col-sm-9">@Model.Db.SizeMb MB</dd>
+                                <dt class="col-sm-3">Engine</dt>
+                                <dd class="col-sm-9">@Model.Db.Version</dd>
+                                <dt class="col-sm-3">Last auto backup</dt>
+                                <dd class="col-sm-9">@(Model.Input.LastAutoBackupAt?.ToString("MMM d, yyyy h:mm tt") ?? "Never")</dd>
+                            </dl>
+                        </div>
+                    </div>
+                }
+
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">Backup schedule</h5>
+                        <form method="post" asp-controller="Dashboard" asp-action="SaveBackup">
+                            <div class="row g-4 align-items-end">
+                                <div class="col-md-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" asp-for="Input.AutoBackupEnabled" />
+                                        <label class="form-check-label" asp-for="Input.AutoBackupEnabled">Back up every day</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label fw-medium" for="bkTime">Time</label>
+                                    <input id="bkTime" name="Input.AutoBackupTime" type="time" class="form-control"
+                                           value="@Model.Input.AutoBackupTime.ToString(@"hh\:mm")" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-medium" for="bkDays">Keep backups for (days)</label>
+                                    <input id="bkDays" asp-for="Input.BackupRetentionDays" type="number" min="1" max="365" class="form-control" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-medium" for="bkFolder">Backup folder</label>
+                                    <input id="bkFolder" asp-for="Input.BackupFolder" class="form-control" />
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-text mb-2">The folder is on the SQL Server machine, and the SQL Server service account needs write access to it.</div>
+                                    <button class="btn btn-primary px-4">Save schedule</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title mb-0">Backup files</h5>
+                            <form method="post" asp-controller="Dashboard" asp-action="BackupNow" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='Backing up…';">
+                                <button class="btn btn-success"><i class="bi bi-database-down me-1"></i>Back up now</button>
+                            </form>
+                        </div>
+
+                        @if (Model.Backups.Count == 0)
+                        {
+                            <p class="text-muted mb-0">No backups yet. Select <strong>Back up now</strong> to create the first one.</p>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead><tr><th>File</th><th>Created</th><th>Size</th><th class="text-end">Actions</th></tr></thead>
+                                    <tbody>
+                                        @foreach (var b in Model.Backups)
+                                        {
+                                            <tr>
+                                                <td>@b.Name</td>
+                                                <td>@b.CreatedAt.ToString("MMM d, yyyy h:mm tt")</td>
+                                                <td>@RJED_FleetExpense.Models.SystemSettingsViewModel.FormatSize(b.SizeBytes)</td>
+                                                <td class="text-end text-nowrap">
+                                                    <a class="btn btn-sm btn-outline-primary" asp-controller="Dashboard" asp-action="DownloadBackup" asp-route-file="@b.Name">Download</a>
+                                                    <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#restoreModal" data-file="@b.Name">Restore</button>
+                                                    <form method="post" asp-controller="Dashboard" asp-action="DeleteBackup" class="d-inline" onsubmit="return confirm('Delete @b.Name? This cannot be undone.');">
+                                                        <input type="hidden" name="file" value="@b.Name" />
+                                                        <button class="btn btn-sm btn-outline-danger">Delete</button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Restore confirmation -->
+<div class="modal fade" id="restoreModal" tabindex="-1" aria-labelledby="restoreTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" asp-controller="Dashboard" asp-action="RestoreBackup" class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="restoreTitle">Restore database</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>This replaces all current data with the contents of <strong id="restoreFileLabel"></strong>. Everyone is disconnected while it runs. A copy of the current data is saved first.</p>
+                <input type="hidden" name="file" id="restoreFile" />
+                <label class="form-label" for="confirmText">Type <strong>RESTORE</strong> to continue</label>
+                <input id="confirmText" name="confirmText" class="form-control" autocomplete="off" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-danger">Restore database</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        :root {
+            --primary-blue: #1e3c72;
+            --success-green: #4caf50;
+            --sidebar-dark: #0f1e3a;
+            --sidebar-dark-hover: #15294e;
+            --card-bg: rgba(255, 255, 255, 0.97);
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f6f8, #e8ebee);
+            min-height: 100vh;
+            color: #212529;
+        }
+
+        .sidebar {
+            background: var(--sidebar-dark) !important;
+            border-right: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 2px 0 12px rgba(0,0,0,0.4);
+            backdrop-filter: blur(8px);
+            scrollbar-width: thin;
+        }
+
+            .sidebar .nav-link {
+                padding: 0.65rem 1rem;
+                font-size: 0.88rem;
+                color: rgba(255,255,255,0.9) !important;
+                white-space: nowrap;
+            }
+
+                .sidebar .nav-link:hover, .sidebar .nav-link.active {
+                    background: var(--sidebar-dark-hover);
+                    border-left: 4px solid var(--success-green);
+                    transform: translateX(3px);
+                }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 1rem;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        }
+
+        h2 {
+            color: #0d47a1 !important;
+            font-weight: 800;
+        }
+
+        .text-primary {
+            color: #1e3c72 !important;
+        }
+
+        .text-muted {
+            color: #6c757d !important;
+        }
+    </style>
+}
+
+@section Scripts {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script>
+        // Re-open the tab you were on after a save / backup.
+        (function () {
+            var trigger = document.getElementById('@(tab)-tab') || document.getElementById('general-tab');
+            new bootstrap.Tab(trigger).show();
+
+            // Feed the file name into the restore dialog.
+            document.getElementById('restoreModal').addEventListener('show.bs.modal', function (e) {
+                var file = e.relatedTarget.getAttribute('data-file');
+                document.getElementById('restoreFile').value = file;
+                document.getElementById('restoreFileLabel').textContent = file;
+                document.getElementById('confirmText').value = '';
+            });
+        })();
+    </script>
+}

@@ -1,0 +1,247 @@
+﻿
+@{
+    ViewData["Title"] = "Workflow Rules";
+    Layout = "/Views/Shared/_LayoutAdmin.cshtml";
+}
+<div class="container-fluid py-4">
+    <h2 class="fw-bold text-primary mb-2">Workflow Rules</h2>
+    <p class="text-muted mb-4">Define automatic approval flows, conditions, escalations and notifications for expenses</p>
+
+    <!-- Rules Table -->
+    <div class="card shadow border-0 mb-5">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
+            <h5 class="mb-0">Active Workflow Rules</h5>
+            <button class="btn btn-light btn-sm d-flex align-items-center gap-2 shadow-sm"
+                    data-bs-toggle="modal" data-bs-target="#modalAddRule">
+                <i class="bi bi-plus-lg"></i> Create Rule
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Rule Name</th>
+                            <th>Applies To</th>
+                            <th>Approval Flow</th>
+                            <th>Escalation / Timeout</th>
+                            <th>Status</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="fw-medium">High-Value Expense (> ₱15,000)</td>
+                            <td>All categories<br><small class="text-muted">Amount ≥ ₱15,000</small></td>
+                            <td>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <span class="badge bg-primary">Supervisor</span>
+                                    <span class="badge bg-primary">Department Head</span>
+                                    <span class="badge bg-primary">Finance</span>
+                                </div>
+                            </td>
+                            <td>After 48h → Escalate to Super Admin + email</td>
+                            <td><span class="badge bg-success px-3 py-2">Active</span></td>
+                            <td class="text-end pe-4">
+                                <button class="btn btn-sm btn-outline-primary me-1">Edit</button>
+                                <button class="btn btn-sm btn-outline-danger">Disable</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-medium">Fuel – Monthly Limit Alert</td>
+                            <td>Fuel only<br><small class="text-muted">> 500L / vehicle / month</small></td>
+                            <td>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <span class="badge bg-warning">Fleet Manager</span>
+                                    <span class="badge bg-danger">Auto Reject</span>
+                                </div>
+                            </td>
+                            <td>Immediate notification to driver & manager</td>
+                            <td><span class="badge bg-success px-3 py-2">Active</span></td>
+                            <td class="text-end pe-4">
+                                <button class="btn btn-sm btn-outline-primary me-1">Edit</button>
+                                <button class="btn btn-sm btn-outline-danger">Disable</button>
+                            </td>
+                        </tr>
+                        <!-- more example rows if needed -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-info border-0 shadow-sm d-flex align-items-center">
+        <i class="bi bi-info-circle-fill me-3 fs-4 text-info"></i>
+        Rules are evaluated <strong>top to bottom</strong>. First matching rule wins.
+    </div>
+</div>
+
+<!-- Modal: Create New Rule -->
+<div class="modal fade" id="modalAddRule" tabindex="-1" aria-labelledby="modalAddRuleLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalAddRuleLabel">Create New Workflow Rule</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Rule Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" placeholder="e.g. High-Value Maintenance Approval" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Category / Type</label>
+                        <select class="form-select">
+                            <option value="">All Categories</option>
+                            <option>Fuel</option>
+                            <option>Maintenance & Repairs</option>
+                            <option>Toll & Parking</option>
+                            <option>Emergency</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Minimum Amount (₱)</label>
+                        <input type="number" class="form-control" min="0" step="0.01" placeholder="0 or leave blank">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Maximum Amount (₱)</label>
+                        <input type="number" class="form-control" min="0" step="0.01" placeholder="∞ or leave blank">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-medium">Approval Chain <span class="text-danger">*</span></label>
+                        <div id="stepsContainer" class="border rounded p-3 mb-3 bg-light-subtle">
+                            <!-- Dynamic steps go here -->
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2" onclick="addApprovalStep()">
+                            <i class="bi bi-plus-lg"></i> Add Approval Step
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Timeout (hours)</label>
+                        <input type="number" class="form-control" min="1" placeholder="48">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">On Timeout</label>
+                        <select class="form-select">
+                            <option>Escalate to next level</option>
+                            <option>Escalate to Super Admin</option>
+                            <option>Auto Reject</option>
+                            <option>Notify only</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary px-4">Save Rule</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        :root {
+            --primary-blue: #1e3c72;
+            --primary-blue-light: #2a5298;
+            --primary-blue-dark: #14294f;
+            --accent-green: #28a745;
+            --accent-green-dark: #218838;
+            --warning: #fd7e14;
+            --danger: #dc3545;
+            --light-bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-muted: #6c757d;
+        }
+
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+            border: 1px solid rgba(0,0,0,0.04);
+        }
+
+        .card-header.bg-primary {
+            background-color: var(--primary-blue) !important;
+        }
+
+        h2 {
+            color: var(--primary-blue);
+            font-weight: 700;
+        }
+
+        .text-primary {
+            color: var(--primary-blue) !important;
+        }
+
+        .badge.bg-primary {
+            background-color: var(--primary-blue) !important;
+        }
+
+        .badge.bg-success {
+            background-color: var(--accent-green) !important;
+        }
+
+        .table-light th {
+            background-color: rgba(30, 60, 114, 0.08) !important;
+            color: var(--primary-blue);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.84rem;
+            letter-spacing: 0.6px;
+        }
+
+        .btn-outline-primary {
+            --bs-btn-color: var(--primary-blue);
+            --bs-btn-border-color: var(--primary-blue);
+        }
+
+            .btn-outline-primary:hover {
+                background-color: var(--primary-blue);
+                border-color: var(--primary-blue);
+                color: white;
+            }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: var(--primary-blue-light);
+            box-shadow: 0 0 0 0.25rem rgba(42, 82, 152, 0.20);
+        }
+
+        .bg-light-subtle {
+            background-color: rgba(248, 249, 250, 0.7) !important;
+        }
+
+        .alert-info {
+            background-color: rgba(23, 162, 184, 0.12);
+            color: #0c5460;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        function addApprovalStep() {
+            const container = document.getElementById('stepsContainer');
+            const stepNumber = container.children.length + 1;
+            const stepDiv = document.createElement('div');
+            stepDiv.className = 'd-flex align-items-center gap-3 mb-3 p-3 border rounded bg-white shadow-sm';
+            stepDiv.innerHTML = `
+                <span class="badge bg-primary fs-6 px-3 py-2">${stepNumber}</span>
+                <select class="form-select flex-grow-1">
+                    <option>Supervisor</option>
+                    <option>Department Head</option>
+                    <option>Fleet Manager</option>
+                    <option>Finance Officer</option>
+                    <option>Super Admin</option>
+                </select>
+                <input type="number" class="form-control w-auto" style="width: 90px;" placeholder="Hours" title="Timeout before escalation">
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('div').remove()">
+                    <i class="bi bi-trash"></i>
+                </button>
+            `;
+            container.appendChild(stepDiv);
+        }
+    </script>
+}

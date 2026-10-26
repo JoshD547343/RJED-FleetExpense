@@ -1,0 +1,379 @@
+﻿@model IEnumerable<RJED_FleetExpense.Data.ApplicationUser>
+@{
+    ViewData["Title"] = "My Team";
+    Layout = "~/Views/Shared/_LayoutDepartment.cshtml";
+}
+
+@section Styles {
+    <style>
+        :root {
+            --navy: #14294f;
+            --navy-hover: #1e3c72;
+            --green: #4caf50;
+            --bg: #f0f2f7;
+            --card: #fff;
+            --text: #1a1f36;
+            --muted: #6b7280;
+            --border: #e5e9f2;
+        }
+
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.75rem;
+        }
+
+        .summary-strip {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-pill {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            box-shadow: 0 2px 12px rgba(20,41,79,0.06);
+            display: flex;
+            align-items: center;
+            gap: .85rem;
+            animation: fadeUp 0.4s ease both;
+        }
+
+        .summary-pill:nth-child(2) { animation-delay: .05s; }
+        .summary-pill:nth-child(3) { animation-delay: .1s; }
+
+        .pill-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .pill-label {
+            font-size: 0.7rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            font-weight: 600;
+        }
+
+        .pill-value {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--navy);
+            font-family: 'Syne', sans-serif;
+        }
+
+        .filter-bar {
+            background: var(--card);
+            border-radius: 14px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 2px 12px rgba(20,41,79,0.06);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            animation: fadeUp 0.38s ease both;
+        }
+
+        .filter-bar input {
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 13px;
+            font-size: 0.875rem;
+            color: var(--text);
+            background: #f8faff;
+            outline: none;
+            transition: border-color .2s;
+            font-family: 'DM Sans', sans-serif;
+            min-width: 240px;
+        }
+
+        .filter-bar input:focus {
+            border-color: var(--navy);
+        }
+
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.25rem;
+            animation: fadeUp 0.45s ease both;
+            animation-delay: .15s;
+        }
+
+        .member-card {
+            background: var(--card);
+            border-radius: 14px;
+            box-shadow: 0 2px 12px rgba(20,41,79,0.06);
+            padding: 1.4rem 1.5rem;
+            border: 1.5px solid transparent;
+            transition: all .2s;
+            display: flex;
+            flex-direction: column;
+            gap: .85rem;
+        }
+
+        .member-card:hover {
+            border-color: var(--navy);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(20,41,79,0.1);
+        }
+
+        .member-top {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .member-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: var(--navy);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            font-family: 'Syne', sans-serif;
+        }
+
+        .member-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--navy);
+            font-family: 'Syne', sans-serif;
+            line-height: 1.2;
+        }
+
+        .member-email {
+            font-size: 0.78rem;
+            color: var(--muted);
+            margin-top: 2px;
+            word-break: break-all;
+        }
+
+        .member-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: .5rem;
+            padding-top: .85rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .mstat {
+            text-align: center;
+        }
+
+        .mstat-value {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--navy);
+            font-family: 'Syne', sans-serif;
+        }
+
+        .mstat-label {
+            font-size: 0.68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .4px;
+            font-weight: 600;
+            margin-top: 1px;
+        }
+
+        .member-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .online-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .status-text {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        .btn-view-expenses {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--navy);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 11px;
+            border-radius: 7px;
+            border: 1.5px solid var(--border);
+            transition: all .15s;
+        }
+
+        .btn-view-expenses:hover {
+            background: var(--navy);
+            color: #fff;
+            border-color: var(--navy);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 1rem;
+            color: var(--muted);
+            background: var(--card);
+            border-radius: 14px;
+            box-shadow: 0 2px 12px rgba(20,41,79,0.06);
+        }
+
+        .empty-state i {
+            font-size: 2.5rem;
+            display: block;
+            margin-bottom: .75rem;
+            opacity: .4;
+        }
+
+        .empty-state p {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: .25rem;
+        }
+
+        @@keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+}
+
+<div class="page-header" style="animation: fadeUp .35s ease both;">
+    <div>
+        <h4 class="fw-bold mb-0" style="color:var(--navy); font-family:'Syne',sans-serif;">My Team</h4>
+        <small class="text-muted">Department members and their expense activity</small>
+    </div>
+</div>
+
+<!-- Summary Strip -->
+<div class="summary-strip">
+    <div class="summary-pill">
+        <div class="pill-icon" style="background:#e8edf7;color:var(--navy)"><i class="bi bi-people"></i></div>
+        <div>
+            <div class="pill-label">Total Members</div>
+            <div class="pill-value">@(Model?.Count() ?? 0)</div>
+        </div>
+    </div>
+    <div class="summary-pill">
+        <div class="pill-icon" style="background:#fff8e1;color:#f57f17"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+            <div class="pill-label">Pending Claims</div>
+            <div class="pill-value">@(ViewBag.TotalPending ?? 0)</div>
+        </div>
+    </div>
+    <div class="summary-pill">
+        <div class="pill-icon" style="background:#e8f5e9;color:#2e7d32"><i class="bi bi-cash-stack"></i></div>
+        <div>
+            <div class="pill-label">Total Submitted</div>
+            <div class="pill-value">&#8369;@String.Format("{0:N0}", ViewBag.TotalSubmitted ?? 0)</div>
+        </div>
+    </div>
+</div>
+
+<!-- Search -->
+<div class="filter-bar">
+    <i class="bi bi-search" style="color:var(--muted)"></i>
+    <input type="text" id="memberSearch" placeholder="Search team members by name or email..." />
+</div>
+
+<!-- Team Grid -->
+@if (Model != null && Model.Any())
+{
+    <div class="team-grid" id="teamGrid">
+        @foreach (var member in Model)
+        {
+            var initials = string.IsNullOrEmpty(member.UserName)
+                ? "?"
+                : member.UserName.Length >= 2
+                    ? member.UserName.Substring(0, 2).ToUpper()
+                    : member.UserName.Substring(0, 1).ToUpper();
+
+            var avatarColors = new[] {
+                "#14294f","#1e3c72","#2e7d32","#f57f17","#6a1b9a","#00838f","#c62828","#2c387e"
+            };
+            var colorIndex = Math.Abs(member.UserName?.GetHashCode() ?? 0) % avatarColors.Length;
+            var avatarColor = avatarColors[colorIndex];
+
+            var pendingCount    = ViewBag.MemberStats != null ? (int)(ViewBag.MemberStats[member.Id]?.Pending    ?? 0) : 0;
+            var approvedCount   = ViewBag.MemberStats != null ? (int)(ViewBag.MemberStats[member.Id]?.Approved   ?? 0) : 0;
+            var totalCount      = ViewBag.MemberStats != null ? (int)(ViewBag.MemberStats[member.Id]?.Total      ?? 0) : 0;
+
+            <div class="member-card" data-name="@member.UserName?.ToLower()" data-email="@member.Email?.ToLower()">
+                <div class="member-top">
+                    <div class="member-avatar" style="background:@avatarColor">@initials</div>
+                    <div>
+                        <div class="member-name">@member.UserName</div>
+                        <div class="member-email">@member.Email</div>
+                    </div>
+                </div>
+
+                <div class="member-stats">
+                    <div class="mstat">
+                        <div class="mstat-value">@totalCount</div>
+                        <div class="mstat-label">Total</div>
+                    </div>
+                    <div class="mstat">
+                        <div class="mstat-value" style="color:#f57f17">@pendingCount</div>
+                        <div class="mstat-label">Pending</div>
+                    </div>
+                    <div class="mstat">
+                        <div class="mstat-value" style="color:#2e7d32">@approvedCount</div>
+                        <div class="mstat-label">Approved</div>
+                    </div>
+                </div>
+
+                <div class="member-footer">
+                    <span class="status-text">
+                        <span class="online-dot"></span>Active member
+                    </span>
+                    <a asp-controller="Department" asp-action="Expenses"
+                       asp-route-userId="@member.Id" class="btn-view-expenses">
+                        <i class="bi bi-receipt"></i> Expenses
+                    </a>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="empty-state">
+        <i class="bi bi-people"></i>
+        <p>No team members found</p>
+        <small>Your department has no members assigned yet.</small>
+    </div>
+}
+@section Scripts {
+    <script>
+        document.getElementById('memberSearch').addEventListener('input', function () {
+            var q = this.value.toLowerCase();
+            document.querySelectorAll('#teamGrid .member-card').forEach(function(card) {
+                var name  = card.dataset.name  || '';
+                var email = card.dataset.email || '';
+                card.style.display = (name.includes(q) || email.includes(q)) ? '' : 'none';
+            });
+        });
+    </script>
+}

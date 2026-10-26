@@ -1,0 +1,556 @@
+﻿@model RJED_FleetExpense.Models.BudgetPageViewModel
+@{
+    ViewData["Title"] = "Budget & Cost Control";
+    Layout = "/Views/Shared/_LayoutAdmin.cshtml";
+
+    // Default period = previous month
+    var today = DateTime.Today;
+    var thisMonthStart = new DateTime(today.Year, today.Month, 1);
+    var prevStart = thisMonthStart.AddMonths(-1);
+    var prevEnd = thisMonthStart.AddDays(-1);
+
+    var totalPct = Model.TotalBudget == 0 ? 0 : (double)(Model.TotalCommitted / Model.TotalBudget * 100);
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+}
+
+@section Styles {
+    <style>
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.4rem;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 4px solid transparent;
+            border-radius: 12px;
+            padding: 1.05rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            opacity: 0;
+            transform: translateY(10px);
+            animation: rise 0.38s ease forwards;
+        }
+
+            .stat-card:nth-child(1) {
+                border-left-color: #3b82f6;
+                animation-delay: 0s;
+            }
+
+            .stat-card:nth-child(2) {
+                border-left-color: var(--green);
+                animation-delay: 0.06s;
+            }
+
+            .stat-card:nth-child(3) {
+                border-left-color: #ca8a04;
+                animation-delay: 0.12s;
+            }
+
+        .stat-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .stat-label {
+            font-size: 0.68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .stat-sub {
+            font-size: 0.7rem;
+            color: var(--muted);
+        }
+
+        .stat-value {
+            margin-left: auto;
+            text-align: right;
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1.1;
+        }
+
+        .sc {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+        }
+
+        .sc-head {
+            padding: 0.85rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: .5rem;
+        }
+
+        .sc-title {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sc-body {
+            padding: 1.1rem 1.2rem;
+        }
+
+        .seg {
+            display: inline-flex;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+            .seg a {
+                padding: 5px 12px;
+                font-size: .76rem;
+                font-weight: 600;
+                color: var(--muted);
+                text-decoration: none;
+                background: var(--slate);
+            }
+
+                .seg a.on {
+                    background: var(--ink);
+                    color: #fff;
+                }
+
+        .ex-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .ex-table thead th {
+                background: #f8faff;
+                color: var(--muted);
+                font-size: 0.66rem;
+                text-transform: uppercase;
+                letter-spacing: .6px;
+                padding: 0.7rem 1rem;
+                text-align: left;
+                white-space: nowrap;
+            }
+
+            .ex-table tbody td {
+                padding: 0.78rem 1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: .84rem;
+                vertical-align: middle;
+            }
+
+            .ex-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .ex-table tbody tr:hover {
+                background: #f8faff;
+            }
+
+        .num {
+            text-align: right !important;
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-weight: 700;
+            color: var(--ink);
+            white-space: nowrap;
+        }
+
+        .neg {
+            color: #991b1b !important;
+        }
+
+        .bar-track {
+            height: 8px;
+            background: var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 4px;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 10px;
+        }
+
+        .bar-ok {
+            background: #10b981;
+        }
+
+        .bar-warn {
+            background: #f59e0b;
+        }
+
+        .bar-over {
+            background: #ef4444;
+        }
+
+        .st {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .st-rej {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .st-pend {
+            background: #fffbeb;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        .btn-act {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1.5px solid var(--border);
+            background: var(--slate);
+            color: var(--muted);
+            font-size: .76rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+            .btn-act:hover {
+                color: var(--ink);
+                border-color: var(--ink-2);
+            }
+
+        .btn-act-danger:hover {
+            color: #991b1b;
+            border-color: #fecaca;
+            background: #fef2f2;
+        }
+
+        .btn-main {
+            background: var(--ink);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 7px 18px;
+            font-size: .84rem;
+            font-weight: 600;
+        }
+
+        .empty-box {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: var(--muted);
+        }
+
+            .empty-box i {
+                font-size: 2rem;
+                opacity: .25;
+                display: block;
+                margin-bottom: .5rem;
+            }
+
+        .form-label {
+            font-size: .72rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .quick-pick {
+            font-size: .74rem;
+            font-weight: 600;
+            color: var(--green);
+            background: none;
+            border: none;
+            padding: 0;
+            margin-right: .9rem;
+            cursor: pointer;
+        }
+
+        @@keyframes rise {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@media (max-width: 992px) {
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div class="seg">
+        <a class="@(Model.ShowAll ? "" : "on")" asp-action="Budgets">Active now</a>
+        <a class="@(Model.ShowAll ? "on" : "")" asp-action="Budgets" asp-route-show="all">All periods</a>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<!-- Stat Cards -->
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#f0f9ff;color:#3b82f6">
+            <i class="bi bi-wallet2"></i>
+        </div>
+        <div>
+            <div class="stat-label">Total Budget</div>
+            <div class="stat-sub">@(Model.ShowAll ? "All periods" : "Active periods")</div>
+        </div>
+        <div class="stat-value">&#8369;@Model.TotalBudget.ToString("N0")</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#ecfdf5;color:var(--green)">
+            <i class="bi bi-cash-coin"></i>
+        </div>
+        <div>
+            <div class="stat-label">Reimbursed</div>
+            <div class="stat-sub">Deducted from budget</div>
+        </div>
+        <div class="stat-value">&#8369;@Model.TotalCommitted.ToString("N0")</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fefce8;color:#ca8a04">
+            <i class="bi bi-pie-chart"></i>
+        </div>
+        <div>
+            <div class="stat-label">Overall Used</div>
+            <div class="stat-sub">Of total budget</div>
+        </div>
+        <div class="stat-value">@totalPct.ToString("0.#")%</div>
+    </div>
+</div>
+
+<!-- Budgets table -->
+<div class="sc mb-4">
+    <div class="sc-head">
+        <h6 class="sc-title"><i class="bi bi-list-check"></i> Department Budgets</h6>
+    </div>
+
+    @if (!Model.Rows.Any())
+    {
+        <div class="empty-box">
+            <i class="bi bi-inbox"></i>
+            <p class="mb-0">No budgets found.</p>
+        </div>
+    }
+    else
+    {
+        <div style="overflow-x:auto">
+            <table class="ex-table">
+                <thead>
+                    <tr>
+                        <th>Department</th>
+                        <th>Period</th>
+                        <th style="text-align:right">Budget</th>
+                        <th style="text-align:right">Reimbursed</th>
+                        <th style="text-align:right">Awaiting</th>
+                        <th style="text-align:right">Remaining</th>
+                        <th style="min-width:190px">Usage</th>
+                        <th>Mode</th>
+                        <th style="text-align:center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.Rows)
+                    {
+                        var barClass = r.State == "Over" ? "bar-over" : r.State == "Warning" ? "bar-warn" : "bar-ok";
+                        var b = r.Budget;
+                        <tr>
+                            <td style="font-weight:600">@r.DepartmentName</td>
+                            <td style="white-space:nowrap;color:var(--muted);font-size:.8rem">@b.StartDate.ToString("MMM d, yyyy") &ndash; @b.EndDate.ToString("MMM d, yyyy")</td>
+                            <td class="num">&#8369;@b.TotalAmount.ToString("N2")</td>
+                            <td class="num">&#8369;@r.Approved.ToString("N2")</td>
+                            <td class="num" style="color:var(--muted)">&#8369;@r.Pending.ToString("N2")</td>
+                            <td class="num @(r.Remaining < 0 ? "neg" : "")">&#8369;@r.Remaining.ToString("N2")</td>
+                            <td>
+                                <div class="bar-track">
+                                    <div class="bar-fill @barClass" style="width:@(Math.Min(r.UsedPct, 100).ToString("0.##", inv))%"></div>
+                                </div>
+                                <small class="text-muted">@r.UsedPct.ToString("0.#")% &middot; alert at @b.AlertThresholdPercent%</small>
+                            </td>
+                            <td>
+                                @if (b.BlockWhenExceeded)
+                                {
+                                    <span class="st st-rej"><i class="bi bi-slash-circle-fill"></i> Blocks</span>
+                                }
+                                else
+                                {
+                                    <span class="st st-pend"><i class="bi bi-exclamation-triangle-fill"></i> Warns</span>
+                                }
+                            </td>
+                            <td style="white-space:nowrap;text-align:center">
+                                <button type="button" class="btn-act btn-edit"
+                                        data-id="@b.BudgetId"
+                                        data-dept="@b.DepartmentId"
+                                        data-start="@b.StartDate.ToString("yyyy-MM-dd")"
+                                        data-end="@b.EndDate.ToString("yyyy-MM-dd")"
+                                        data-amount="@b.TotalAmount.ToString("0.00", inv)"
+                                        data-alert="@b.AlertThresholdPercent"
+                                        data-block="@b.BlockWhenExceeded.ToString().ToLower()">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </button>
+
+                                <form asp-action="RenewBudget" asp-controller="AdminDashboard" method="post" class="d-inline">
+                                    <input type="hidden" name="id" value="@b.BudgetId" />
+                                    <button class="btn-act" title="Create the next period"><i class="bi bi-arrow-repeat"></i> Renew</button>
+                                </form>
+
+                                <form asp-action="DeleteBudget" asp-controller="AdminDashboard" method="post" class="d-inline"
+                                      onsubmit="return confirm('Remove this budget?');">
+                                    <input type="hidden" name="id" value="@b.BudgetId" />
+                                    <button class="btn-act btn-act-danger"><i class="bi bi-trash"></i> Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- Form -->
+<div class="sc" id="budgetFormCard">
+    <div class="sc-head">
+        <h6 class="sc-title"><i class="bi bi-plus-circle"></i> <span id="formTitle">Set a new budget</span></h6>
+        <div>
+            <button type="button" class="quick-pick" id="pickPrev">Previous month</button>
+            <button type="button" class="quick-pick" id="pickThis">This month</button>
+        </div>
+    </div>
+    <div class="sc-body">
+        <form asp-action="SaveBudget" asp-controller="AdminDashboard" method="post" class="row g-3 align-items-end">
+            <input type="hidden" name="BudgetId" id="fId" value="0" />
+
+            <div class="col-md-3">
+                <label class="form-label">Department</label>
+                <select name="DepartmentId" id="fDept" class="form-select" required>
+                    @foreach (var d in Model.Departments)
+                    {
+                        <option value="@d.DepartmentId">@d.DepartmentName</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Start date</label>
+                <input type="date" name="StartDate" id="fStart" class="form-control" value="@prevStart.ToString("yyyy-MM-dd")" required />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">End date</label>
+                <input type="date" name="EndDate" id="fEnd" class="form-control" value="@prevEnd.ToString("yyyy-MM-dd")" required />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Amount (&#8369;)</label>
+                <input name="TotalAmount" id="fAmount" type="number" step="0.01" min="0.01" class="form-control" required />
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">Alert %</label>
+                <input name="AlertThresholdPercent" id="fAlert" type="number" min="1" max="100" value="80" class="form-control" />
+            </div>
+            <div class="col-md-2">
+                <div class="form-check">
+                    <input type="checkbox" name="BlockWhenExceeded" id="fBlock" value="true" class="form-check-input" />
+                    <label class="form-check-label small" for="fBlock">Block when exceeded</label>
+                </div>
+            </div>
+            <div class="col-12 d-flex gap-2">
+                <button class="btn-main">Save budget</button>
+                <button type="button" class="btn-act" id="btnReset">Clear</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function fmt(d) {
+            var m = String(d.getMonth() + 1).padStart(2, '0');
+            var day = String(d.getDate()).padStart(2, '0');
+            return d.getFullYear() + '-' + m + '-' + day;
+        }
+
+        // monthOffset: -1 = previous month, 0 = this month
+        function monthRange(monthOffset) {
+            var now = new Date();
+            var start = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+            var end = new Date(now.getFullYear(), now.getMonth() + monthOffset + 1, 0);
+            return { start: fmt(start), end: fmt(end) };
+        }
+
+        function setRange(offset) {
+            var r = monthRange(offset);
+            document.getElementById('fStart').value = r.start;
+            document.getElementById('fEnd').value = r.end;
+        }
+
+        document.getElementById('pickPrev').addEventListener('click', function () { setRange(-1); });
+        document.getElementById('pickThis').addEventListener('click', function () { setRange(0); });
+
+        document.querySelectorAll('.btn-edit').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.getElementById('fId').value = btn.dataset.id;
+                document.getElementById('fDept').value = btn.dataset.dept;
+                document.getElementById('fStart').value = btn.dataset.start;
+                document.getElementById('fEnd').value = btn.dataset.end;
+                document.getElementById('fAmount').value = btn.dataset.amount;
+                document.getElementById('fAlert').value = btn.dataset.alert;
+                document.getElementById('fBlock').checked = btn.dataset.block === 'true';
+                document.getElementById('formTitle').textContent = 'Edit budget';
+                document.getElementById('budgetFormCard').scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+
+        document.getElementById('btnReset').addEventListener('click', function () {
+            document.getElementById('fId').value = 0;
+            setRange(-1);
+            document.getElementById('fAmount').value = '';
+            document.getElementById('fAlert').value = 80;
+            document.getElementById('fBlock').checked = false;
+            document.getElementById('formTitle').textContent = 'Set a new budget';
+        });
+    </script>
+}

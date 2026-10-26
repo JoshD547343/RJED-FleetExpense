@@ -1,0 +1,955 @@
+﻿@model IEnumerable<RJED_FleetExpense.Data.ApplicationUser>
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<RJED_FleetExpense.Data.ApplicationUser> UserManager
+
+@{
+    ViewData["Title"] = "Manage Users & Roles";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var currentUserId = UserManager.GetUserId(User);
+
+    // Pre-compute users with their role (Super Admins are INCLUDED on this page)
+    var allUsers = new List<(RJED_FleetExpense.Data.ApplicationUser User, string Role)>();
+    foreach (var u in Model ?? Enumerable.Empty<RJED_FleetExpense.Data.ApplicationUser>())
+    {
+        var userRoles = await UserManager.GetRolesAsync(u);
+        allUsers.Add((u, userRoles.FirstOrDefault() ?? "—"));
+    }
+
+    var visibleUsers = allUsers.Where(x => !x.User.IsArchived).ToList();
+    var archivedUsers = allUsers.Where(x => x.User.IsArchived).ToList();
+
+    // Super Admin stats
+    var totalSuperAdmins = visibleUsers.Count(x => x.Role == "Super_Admin");
+    var activeSuperAdmins = visibleUsers.Count(x => x.Role == "Super_Admin" && x.User.IsActive);
+    var activeUsers = visibleUsers.Count(x => x.User.IsActive);
+}
+
+@section Styles {
+    <style>
+        .page-header h2 { font-size: 1.6rem; font-weight: 700; color: #14294f; }
+        .page-header p { color: #6c757d; margin: 0; }
+
+        /* Summary strip */
+        .sa-strip {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .sa-card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            padding: 1.1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .sa-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+
+        .sa-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 2px;
+        }
+
+        .sa-value { font-size: 1.6rem; font-weight: 700; color: #14294f; line-height: 1.1; }
+
+        .sa-warning {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.85rem 1.1rem;
+            border-radius: 10px;
+            background: #fff3e0;
+            color: #e65100;
+            font-size: 0.88rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Tabs */
+        .nav-tabs { border-bottom: 2px solid #e9ecef; }
+
+            .nav-tabs .nav-link {
+                color: #6c757d;
+                font-weight: 600;
+                font-size: 0.9rem;
+                padding: 0.75rem 1.5rem;
+                border: none;
+                border-bottom: 3px solid transparent;
+                border-radius: 0;
+                transition: all 0.2s;
+            }
+
+                .nav-tabs .nav-link:hover { color: #14294f; border-bottom-color: #c8d6e5; }
+
+                .nav-tabs .nav-link.active {
+                    color: #14294f;
+                    font-weight: 700;
+                    border-bottom: 3px solid #4caf50;
+                    background: none;
+                }
+
+        .tab-count {
+            display: inline-block;
+            min-width: 22px;
+            padding: 1px 8px;
+            margin-left: 6px;
+            border-radius: 20px;
+            background: #eef0f8;
+            color: #14294f;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .section-card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+
+        .search-input {
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            font-size: 0.9rem;
+            padding: 0.55rem 0.85rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+            .search-input:focus {
+                border-color: #14294f;
+                box-shadow: 0 0 0 3px rgba(20,41,79,0.1);
+                outline: none;
+            }
+
+        /* Tables */
+        .table { margin: 0; }
+
+            .table thead th {
+                background: #f8f9fa;
+                color: #6c757d;
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                font-weight: 700;
+                padding: 0.85rem 1.25rem;
+                border-bottom: 1px solid #e9ecef;
+                white-space: nowrap;
+            }
+
+            .table tbody td {
+                padding: 0.95rem 1.25rem;
+                vertical-align: middle;
+                border-bottom: 1px solid #f5f5f5;
+                font-size: 0.88rem;
+                color: #343a40;
+            }
+
+            .table tbody tr:hover { background: #f8fbff; }
+            .table tbody tr:last-child td { border-bottom: none; }
+
+        /* Badges */
+        .badge-role {
+            padding: 0.35em 0.85em;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-active { background: #e8f5e9; color: #2e7d32; }
+        .badge-inactive { background: #ffebee; color: #c62828; }
+        .badge-archived { background: #eceff1; color: #546e7a; }
+
+        .role-Super_Admin { background: #fce4ec; color: #880e4f; }
+        .role-Admin { background: #e8eaf6; color: #283593; }
+        .role-Supervisor { background: #e3f2fd; color: #1565c0; }
+        .role-Department_head { background: #fff3e0; color: #e65100; }
+        .role-Accounting { background: #f3e5f5; color: #6a1b9a; }
+        .role-Employee { background: #e0f2f1; color: #00695c; }
+
+        .you-tag {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 1px 8px;
+            border-radius: 20px;
+            background: #14294f;
+            color: #fff;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        /* Buttons */
+        .btn-add {
+            background: #14294f;
+            color: white;
+            border-radius: 8px;
+            padding: 0.55rem 1.25rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+
+            .btn-add:hover { background: #1e3c72; color: white; }
+
+        .btn-edit, .btn-delete, .btn-archive, .btn-restore {
+            border: none;
+            border-radius: 6px;
+            padding: 0.3rem 0.75rem;
+            font-size: 0.82rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-edit { background: #e8f0fe; color: #1a56db; }
+            .btn-edit:hover { background: #1a56db; color: white; }
+
+        .btn-delete { background: #ffebee; color: #c62828; }
+            .btn-delete:hover { background: #c62828; color: white; }
+
+        .btn-archive { background: #eceff1; color: #455a64; }
+            .btn-archive:hover:not(:disabled) { background: #455a64; color: white; }
+            .btn-archive:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .btn-restore { background: #e8f5e9; color: #2e7d32; }
+            .btn-restore:hover { background: #2e7d32; color: white; }
+
+        .archive-banner {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.85rem 1.5rem;
+            background: #f5f7f9;
+            border-bottom: 1px solid #e9ecef;
+            color: #546e7a;
+            font-size: 0.85rem;
+        }
+
+            .archive-banner i { font-size: 1.1rem; }
+
+        .archive-empty { text-align: center; padding: 3.5rem 1rem; color: #90a4ae; }
+            .archive-empty i { font-size: 2.8rem; display: block; margin-bottom: 0.75rem; opacity: 0.6; }
+
+        /* Modals */
+        .modal-content { border: none; border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.15); }
+        .modal-header { border-radius: 14px 14px 0 0; padding: 1.25rem 1.5rem; color: white; }
+            .modal-header.blue { background: #14294f; }
+            .modal-header.green { background: #4caf50; }
+            .modal-header.teal { background: #0288d1; }
+            .modal-header.red { background: #c62828; }
+            .modal-header.slate { background: #455a64; }
+
+        .modal .form-label { font-size: 0.85rem; font-weight: 600; color: #495057; }
+        .modal .form-control, .modal .form-select { border-radius: 8px; font-size: 0.9rem; border: 1px solid #dee2e6; }
+            .modal .form-control:focus, .modal .form-select:focus {
+                border-color: #14294f;
+                box-shadow: 0 0 0 3px rgba(20,41,79,0.1);
+            }
+
+        .modal-footer { border-top: 1px solid #f0f0f0; padding: 1rem 1.5rem; }
+
+        .btn-modal-primary, .btn-modal-danger, .btn-modal-success, .btn-modal-slate, .btn-modal-cancel {
+            border-radius: 8px;
+            padding: 0.5rem 1.5rem;
+            font-weight: 600;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-modal-primary { background: #14294f; color: white; }
+            .btn-modal-primary:hover { background: #1e3c72; color: white; }
+        .btn-modal-danger { background: #c62828; color: white; }
+            .btn-modal-danger:hover { background: #8b0000; color: white; }
+        .btn-modal-success { background: #4caf50; color: white; }
+            .btn-modal-success:hover { background: #388e3c; color: white; }
+        .btn-modal-slate { background: #455a64; color: white; }
+            .btn-modal-slate:hover { background: #37474f; color: white; }
+        .btn-modal-cancel { background: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; }
+            .btn-modal-cancel:hover { background: #e9ecef; color: #343a40; }
+    </style>
+}
+
+<!-- Alerts -->
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+        <i class="bi bi-check-circle me-2"></i>@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+        <i class="bi bi-exclamation-circle me-2"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div class="page-header">
+        <h2><i class="bi bi-people me-2"></i>Manage Users & Roles</h2>
+        <p>Add, edit, and manage user accounts • Assign roles and permissions</p>
+    </div>
+    <button class="btn-add" data-bs-toggle="modal" data-bs-target="#modalAddUser">
+        <i class="bi bi-plus-lg"></i> Add New User
+    </button>
+</div>
+
+<!-- Summary strip -->
+<div class="sa-strip">
+    <div class="sa-card">
+        <div class="sa-icon" style="background:#fce4ec;color:#880e4f;"><i class="bi bi-shield-lock-fill"></i></div>
+        <div>
+            <div class="sa-label">Active Super Admins</div>
+            <div class="sa-value">@activeSuperAdmins</div>
+            <small class="text-muted">of @totalSuperAdmins total</small>
+        </div>
+    </div>
+    <div class="sa-card">
+        <div class="sa-icon" style="background:#ecfdf5;color:#10b981;"><i class="bi bi-person-check-fill"></i></div>
+        <div>
+            <div class="sa-label">Active Users</div>
+            <div class="sa-value">@activeUsers</div>
+            <small class="text-muted">of @visibleUsers.Count accounts</small>
+        </div>
+    </div>
+    <div class="sa-card">
+        <div class="sa-icon" style="background:#eceff1;color:#546e7a;"><i class="bi bi-archive-fill"></i></div>
+        <div>
+            <div class="sa-label">Archived</div>
+            <div class="sa-value">@archivedUsers.Count</div>
+            <small class="text-muted">Can't sign in</small>
+        </div>
+    </div>
+</div>
+
+@if (activeSuperAdmins <= 1)
+{
+    <div class="sa-warning">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+        <span>
+            Only <strong>@activeSuperAdmins</strong> active Super Admin account. It's protected from being deactivated or
+            demoted. Add another Super Admin to avoid being locked out.
+        </span>
+    </div>
+}
+
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-4" id="manageTabs" role="tablist">
+    <li class="nav-item">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#users" type="button">
+            <i class="bi bi-person me-1"></i> Users
+            <span class="tab-count">@visibleUsers.Count</span>
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#roles" type="button">
+            <i class="bi bi-shield me-1"></i> Roles
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#archive" type="button">
+            <i class="bi bi-archive me-1"></i> Archive
+            <span class="tab-count">@archivedUsers.Count</span>
+        </button>
+    </li>
+</ul>
+
+<!-- Tab Content -->
+<div class="tab-content">
+
+    <!-- ── USERS TAB ── -->
+    <div class="tab-pane fade show active" id="users">
+        <div class="section-card">
+            <div class="p-4 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2" style="max-width:400px; width:100%;">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" id="searchInput" class="form-control border-start-0 search-input"
+                               placeholder="Search by name, email, role..." onkeyup="filterTable()" />
+                    </div>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" style="border-radius:8px; font-size:0.88rem;"
+                            type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-funnel me-1"></i> Filter
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#" onclick="filterByStatus('Active'); return false;">Active only</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="filterByStatus('Inactive'); return false;">Inactive only</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="filterByRole('Super_Admin'); return false;">Super Admins only</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="clearFilter(); return false;">Clear filter</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table" id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>Full Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Department</th>
+                            <th>Status</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in visibleUsers)
+                        {
+                            var user = item.User;
+                            var role = item.Role;
+                            var status = user.IsActive ? "Active" : "Inactive";
+                            var roleClass = "role-" + role.Replace(" ", "_");
+                            var statClass = user.IsActive ? "badge-active" : "badge-inactive";
+                            var isSelf = user.Id == currentUserId;
+
+                            <tr data-userid="@user.Id"
+                                data-fullname="@user.FullName"
+                                data-email="@user.Email"
+                                data-role="@role"
+                                data-department="@user.Department"
+                                data-status="@status"
+                                data-self="@(isSelf ? "true" : "false")">
+                                <td class="fw-semibold">
+                                    @(user.FullName ?? "—")
+                                    @if (isSelf)
+                                    {
+                                        <span class="you-tag">You</span>
+                                    }
+                                </td>
+                                <td class="text-muted">@user.Email</td>
+                                <td><span class="badge-role @roleClass">@role</span></td>
+                                <td>@(user.Department ?? "—")</td>
+                                <td><span class="badge-role @statClass">@status</span></td>
+                                <td class="text-end pe-4">
+                                    <button class="btn-edit edit-user-btn me-1" title="Edit user"
+                                            data-bs-toggle="modal" data-bs-target="#modalEditUser">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+
+                                    @if (isSelf)
+                                    {
+                                        <button class="btn-archive me-1" disabled title="You can't archive your own account">
+                                            <i class="bi bi-archive"></i>
+                                        </button>
+                                    }
+                                    else if (!user.IsActive)
+                                    {
+                                        <button class="btn-archive archive-user-btn me-1" title="Archive user"
+                                                data-bs-toggle="modal" data-bs-target="#modalArchiveUser">
+                                            <i class="bi bi-archive"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn-archive me-1" disabled
+                                                title="Set the user to Inactive before archiving">
+                                            <i class="bi bi-archive"></i>
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+                <small class="text-muted" id="userCount">Showing @visibleUsers.Count users</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── ROLES TAB ── -->
+    <div class="tab-pane fade" id="roles">
+        <div class="section-card">
+            <div class="p-4 border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold" style="color:#14294f;">
+                    <i class="bi bi-shield me-2"></i>System Roles
+                </h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Role Name</th>
+                            <th>Description</th>
+                            <th>Users Assigned</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="badge-role role-Super_Admin">Super_Admin</span></td>
+                            <td class="text-muted">Full access — user/role management, system config, audit logs</td>
+                            <td>
+                                @totalSuperAdmins
+                                <small class="text-muted">(@activeSuperAdmins active)</small>
+                            </td>
+                            <td class="text-end pe-4">
+                                <button class="btn-edit" disabled style="opacity:0.5;cursor:not-allowed;">System Role</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge-role role-Admin">Admin</span></td>
+                            <td class="text-muted">Manage users, view expenses, approve workflows</td>
+                            <td>@visibleUsers.Count(x => x.Role == "Admin")</td>
+                            <td class="text-end pe-4"><button class="btn-edit"><i class="bi bi-pencil-square"></i> Edit</button></td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge-role role-Supervisor">Supervisor</span></td>
+                            <td class="text-muted">Approve team expenses, view department reports</td>
+                            <td>@visibleUsers.Count(x => x.Role == "Supervisor")</td>
+                            <td class="text-end pe-4"><button class="btn-edit"><i class="bi bi-pencil-square"></i> Edit</button></td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge-role role-Department_head">Department_head</span></td>
+                            <td class="text-muted">View budgets, approve high-value expenses, department reports</td>
+                            <td>@visibleUsers.Count(x => x.Role == "Department_head")</td>
+                            <td class="text-end pe-4"><button class="btn-edit"><i class="bi bi-pencil-square"></i> Edit</button></td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge-role role-Accounting">Accounting</span></td>
+                            <td class="text-muted">View and process expense reimbursements</td>
+                            <td>@visibleUsers.Count(x => x.Role == "Accounting")</td>
+                            <td class="text-end pe-4"><button class="btn-edit"><i class="bi bi-pencil-square"></i> Edit</button></td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge-role role-Employee">Employee</span></td>
+                            <td class="text-muted">Submit expense reports, view own history</td>
+                            <td>@visibleUsers.Count(x => x.Role == "Employee")</td>
+                            <td class="text-end pe-4"><button class="btn-edit"><i class="bi bi-pencil-square"></i> Edit</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── ARCHIVE TAB ── -->
+    <div class="tab-pane fade" id="archive">
+        <div class="section-card">
+            <div class="p-4 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2" style="max-width:400px; width:100%;">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" id="archiveSearchInput" class="form-control border-start-0 search-input"
+                               placeholder="Search archived users..." onkeyup="filterArchiveTable()" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="archive-banner">
+                <i class="bi bi-info-circle"></i>
+                <span>Archived users can't sign in and are hidden from the Users tab. Restore a user to bring them back.</span>
+            </div>
+
+            @if (archivedUsers.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table" id="archiveTable">
+                        <thead>
+                            <tr>
+                                <th>Full Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Department</th>
+                                <th>Status</th>
+                                <th class="text-end pe-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in archivedUsers)
+                            {
+                                var user = item.User;
+                                var role = item.Role;
+                                var roleClass = "role-" + role.Replace(" ", "_");
+
+                                <tr data-userid="@user.Id"
+                                    data-fullname="@user.FullName"
+                                    data-email="@user.Email"
+                                    data-role="@role"
+                                    data-department="@user.Department">
+                                    <td class="fw-semibold">@(user.FullName ?? "—")</td>
+                                    <td class="text-muted">@user.Email</td>
+                                    <td><span class="badge-role @roleClass">@role</span></td>
+                                    <td>@(user.Department ?? "—")</td>
+                                    <td><span class="badge-role badge-archived"><i class="bi bi-archive me-1"></i>Archived</span></td>
+                                    <td class="text-end pe-4">
+                                        <button class="btn-restore restore-user-btn me-1" title="Restore user"
+                                                data-bs-toggle="modal" data-bs-target="#modalRestoreUser">
+                                            <i class="bi bi-arrow-counterclockwise"></i> Restore
+                                        </button>
+                                        <button class="btn-delete delete-user-btn" title="Delete permanently"
+                                                data-bs-toggle="modal" data-bs-target="#modalDeleteUser">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+                    <small class="text-muted" id="archiveCount">Showing @archivedUsers.Count archived users</small>
+                </div>
+            }
+            else
+            {
+                <div class="archive-empty">
+                    <i class="bi bi-archive"></i>
+                    <h6 class="mb-1" style="color:#546e7a;">No archived users</h6>
+                    <p class="mb-0">Inactive users you archive will show up here.</p>
+                </div>
+            }
+        </div>
+    </div>
+
+</div>
+
+<!-- ── ADD USER MODAL ── -->
+<div class="modal fade" id="modalAddUser" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header blue">
+                <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Add New User</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-controller="Dashboard" asp-action="CreateUser" method="post">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" name="fullName" class="form-control" placeholder="e.g. Juan Dela Cruz" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control" placeholder="juan@rjed.com" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Role</label>
+                            <select name="role" class="form-select" required>
+                                <option value="">Select Role</option>
+                                <option value="Employee">Employee</option>
+                                <option value="Supervisor">Supervisor</option>
+                                <option value="Department_head">Department Head</option>
+                                <option value="Accounting">Accounting</option>
+                                <option value="Admin">Admin</option>
+                                <option value="Super_Admin">Super Admin</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Department</label>
+                            <select name="department" class="form-select">
+                                <option value="">Select Department</option>
+                                <option value="Operations">Operations</option>
+                                <option value="Finance">Finance</option>
+                                <option value="HR">HR</option>
+                                <option value="Logistics">Logistics</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Password</label>
+                            <input type="password" name="password" class="form-control" placeholder="Temporary password" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Confirm Password</label>
+                            <input type="password" name="confirmPassword" class="form-control" placeholder="Confirm password" required />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-modal-primary">
+                        <i class="bi bi-person-plus me-1"></i> Create User
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ── EDIT USER MODAL ── -->
+<div class="modal fade" id="modalEditUser" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header teal">
+                <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Edit User Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-controller="Dashboard" asp-action="EditUser" method="post">
+                <input type="hidden" name="userId" id="editUserId" />
+                <div class="modal-body p-4">
+                    <div class="alert alert-info py-2 d-none" id="editSelfNote" style="font-size:0.85rem;">
+                        <i class="bi bi-info-circle me-1"></i>
+                        This is your own account — your role and status can't be changed here.
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" name="fullName" class="form-control" id="editFullName" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="editEmailDisplay" readonly style="background:#f8f9fa;" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Role</label>
+                            <select name="role" class="form-select" id="editRole">
+                                <option value="Employee">Employee</option>
+                                <option value="Supervisor">Supervisor</option>
+                                <option value="Department_head">Department Head</option>
+                                <option value="Accounting">Accounting</option>
+                                <option value="Admin">Admin</option>
+                                <option value="Super_Admin">Super Admin</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Department</label>
+                            <input type="text" name="department" class="form-control" id="editDepartment" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select" id="editStatus">
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-modal-primary">
+                        <i class="bi bi-save me-1"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ── ARCHIVE USER MODAL ── -->
+<div class="modal fade" id="modalArchiveUser" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header slate">
+                <h5 class="modal-title"><i class="bi bi-archive me-2"></i>Archive User</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-controller="Dashboard" asp-action="ArchiveUser" method="post">
+                <input type="hidden" name="userId" id="archiveUserId" />
+                <div class="modal-body p-4">
+                    <p class="mb-2">Archive <strong id="archiveUserName"></strong>?</p>
+                    <p class="text-muted mb-0" style="font-size:0.88rem;">
+                        They'll be moved to the Archive tab and won't be able to sign in. Their expense history is kept, and you can restore them anytime.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-modal-slate">
+                        <i class="bi bi-archive me-1"></i> Archive User
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ── RESTORE USER MODAL ── -->
+<div class="modal fade" id="modalRestoreUser" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header green">
+                <h5 class="modal-title"><i class="bi bi-arrow-counterclockwise me-2"></i>Restore User</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-controller="Dashboard" asp-action="RestoreUser" method="post">
+                <input type="hidden" name="userId" id="restoreUserId" />
+                <div class="modal-body p-4">
+                    <p class="mb-2">Restore <strong id="restoreUserName"></strong>?</p>
+                    <p class="text-muted mb-0" style="font-size:0.88rem;">
+                        They'll return to the Users tab as Inactive. Set them to Active to let them sign in again.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-modal-success">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Restore User
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ── DELETE USER MODAL ── -->
+<div class="modal fade" id="modalDeleteUser" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header red">
+                <h5 class="modal-title"><i class="bi bi-trash me-2"></i>Delete User</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-controller="Dashboard" asp-action="DeleteUser" method="post">
+                <input type="hidden" name="userId" id="deleteUserId" />
+                <div class="modal-body p-4">
+                    <p>Are you sure you want to delete <strong id="deleteUserName"></strong>? This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-modal-danger">
+                        <i class="bi bi-trash me-1"></i> Delete User
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // ── Users tab: search / filter ──
+        function setUserCount(visible, total) {
+            document.getElementById("userCount").textContent =
+                visible === total ? `Showing ${total} users` : `Showing ${visible} of ${total} users`;
+        }
+
+        function filterTable() {
+            const filter = document.getElementById("searchInput").value.toLowerCase().trim();
+            const rows = document.querySelectorAll("#usersTable tbody tr");
+            let visible = 0;
+            rows.forEach(row => {
+                const match = row.textContent.toLowerCase().includes(filter);
+                row.style.display = match ? "" : "none";
+                if (match) visible++;
+            });
+            setUserCount(visible, rows.length);
+        }
+
+        function filterByStatus(status) {
+            const rows = document.querySelectorAll("#usersTable tbody tr");
+            let visible = 0;
+            rows.forEach(row => {
+                const match = row.dataset.status === status;
+                row.style.display = match ? "" : "none";
+                if (match) visible++;
+            });
+            setUserCount(visible, rows.length);
+        }
+
+        function filterByRole(role) {
+            const rows = document.querySelectorAll("#usersTable tbody tr");
+            let visible = 0;
+            rows.forEach(row => {
+                const match = row.dataset.role === role;
+                row.style.display = match ? "" : "none";
+                if (match) visible++;
+            });
+            setUserCount(visible, rows.length);
+        }
+
+        function clearFilter() {
+            document.getElementById("searchInput").value = "";
+            const rows = document.querySelectorAll("#usersTable tbody tr");
+            rows.forEach(row => row.style.display = "");
+            setUserCount(rows.length, rows.length);
+        }
+
+        // ── Archive tab: search ──
+        function filterArchiveTable() {
+            const filter = document.getElementById("archiveSearchInput").value.toLowerCase().trim();
+            const rows = document.querySelectorAll("#archiveTable tbody tr");
+            let visible = 0;
+            rows.forEach(row => {
+                const match = row.textContent.toLowerCase().includes(filter);
+                row.style.display = match ? "" : "none";
+                if (match) visible++;
+            });
+            const count = document.getElementById("archiveCount");
+            if (count) count.textContent = `Showing ${visible} of ${rows.length} archived users`;
+        }
+
+        // ── Populate Edit Modal ──
+        document.querySelectorAll('.edit-user-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const row = this.closest('tr');
+                const isSelf = row.dataset.self === 'true';
+
+                document.getElementById('editUserId').value       = row.dataset.userid;
+                document.getElementById('editFullName').value     = row.dataset.fullname   || '';
+                document.getElementById('editEmailDisplay').value = row.dataset.email      || '';
+                document.getElementById('editDepartment').value   = row.dataset.department || '';
+
+                const roleSelect = document.getElementById('editRole');
+                for (let opt of roleSelect.options) opt.selected = opt.value === row.dataset.role;
+
+                const statusSelect = document.getElementById('editStatus');
+                for (let opt of statusSelect.options) opt.selected = opt.value === row.dataset.status;
+
+                // Own account: lock role + status
+                roleSelect.disabled = isSelf;
+                statusSelect.disabled = isSelf;
+                document.getElementById('editSelfNote').classList.toggle('d-none', !isSelf);
+            });
+        });
+
+        // ── Populate Archive Modal ──
+        document.querySelectorAll('.archive-user-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const row = this.closest('tr');
+                document.getElementById('archiveUserId').value         = row.dataset.userid;
+                document.getElementById('archiveUserName').textContent = row.dataset.fullname || row.dataset.email;
+            });
+        });
+
+        // ── Populate Restore Modal ──
+        document.querySelectorAll('.restore-user-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const row = this.closest('tr');
+                document.getElementById('restoreUserId').value         = row.dataset.userid;
+                document.getElementById('restoreUserName').textContent = row.dataset.fullname || row.dataset.email;
+            });
+        });
+
+        // ── Populate Delete Modal ──
+        document.querySelectorAll('.delete-user-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const row = this.closest('tr');
+                document.getElementById('deleteUserId').value         = row.dataset.userid;
+                document.getElementById('deleteUserName').textContent = row.dataset.fullname || row.dataset.email;
+            });
+        });
+    </script>
+}

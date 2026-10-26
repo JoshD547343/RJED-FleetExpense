@@ -1,0 +1,610 @@
+﻿@model IEnumerable<RJED_FleetExpense.Models.Expense>
+@{
+    ViewData["Title"] = "For Approval";
+    Layout = "~/Views/Shared/_LayoutDepartment.cshtml";
+    int pendingCount = (int)(ViewBag.TotalPendingCount ?? 0);
+    decimal pendingAmt = (decimal)(ViewBag.TotalPendingAmount ?? 0m);
+}
+
+@section Styles {
+    <style>
+        .page-hd {
+            margin-bottom: 1.4rem;
+        }
+
+        .page-hd-title {
+            font-family: 'Familjen Grotesk',sans-serif;
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--ink);
+            margin: 0 0 3px;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+
+        .page-hd-sub {
+            font-size: .78rem;
+            color: var(--muted);
+        }
+
+        /* KPI cards: label on the left, number on the right */
+        .kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .kpi-chip {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 4px solid #f59e0b;
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: .85rem;
+            box-shadow: 0 1px 3px rgba(15,22,35,.04);
+        }
+
+        .kpi-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            flex-shrink: 0;
+            background: #fff7ed;
+            color: #f59e0b;
+        }
+
+        .kpi-label {
+            font-size: .68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            font-weight: 700;
+        }
+
+        .kpi-sub {
+            font-size: .72rem;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .kpi-val {
+            margin-left: auto;
+            text-align: right;
+            font-family: 'Familjen Grotesk',sans-serif;
+            font-size: 1.7rem;
+            font-weight: 800;
+            color: var(--ink);
+            line-height: 1.1;
+        }
+
+        .filter-bar {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: .85rem 1.1rem;
+            margin-bottom: 1.1rem;
+        }
+
+        .fl-label {
+            font-size: .72rem;
+            font-weight: 700;
+            color: var(--muted);
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .fl-input {
+            width: 100%;
+            padding: .46rem .75rem;
+            border: 1.5px solid var(--border);
+            border-radius: 7px;
+            font-family: inherit;
+            font-size: .835rem;
+            color: var(--text);
+            background: var(--slate);
+            outline: none;
+        }
+
+            .fl-input:focus {
+                border-color: var(--green);
+                background: #fff;
+            }
+
+        .fl-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: .46rem 1rem;
+            border-radius: 7px;
+            font-size: .835rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            font-family: inherit;
+        }
+
+        .fl-primary {
+            background: var(--green);
+            color: #fff;
+        }
+
+        .fl-ghost {
+            background: var(--slate);
+            color: var(--muted);
+            border: 1.5px solid var(--border);
+        }
+
+        .tc {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(15,22,35,.04);
+        }
+
+        .tc-head {
+            padding: .85rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: .5rem;
+        }
+
+        .tc-title {
+            font-family: 'Familjen Grotesk',sans-serif;
+            font-size: .93rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: .45rem;
+        }
+
+        .pill {
+            background: #fff7ed;
+            color: #9a3412;
+            border: 1px solid #fed7aa;
+            border-radius: 20px;
+            font-size: .7rem;
+            font-weight: 700;
+            padding: 2px 10px;
+        }
+
+        .tbl {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .tbl thead th {
+                background: #f8faff;
+                color: var(--muted);
+                font-size: .65rem;
+                text-transform: uppercase;
+                letter-spacing: .7px;
+                font-weight: 700;
+                padding: .7rem 1rem;
+                text-align: left;
+                white-space: nowrap;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .tbl tbody td {
+                padding: .8rem 1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: .84rem;
+                color: var(--text);
+                vertical-align: middle;
+            }
+
+            .tbl tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .tbl tbody tr:hover {
+                background: #f0fdf9;
+            }
+
+        .id-cell {
+            color: var(--muted);
+            font-size: .8rem;
+            font-weight: 600;
+        }
+
+        .emp-cell {
+            display: flex;
+            align-items: center;
+            gap: .55rem;
+        }
+
+        .av {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: #ecfdf5;
+            border: 1.5px solid #a7f3d0;
+            color: #065f46;
+            font-size: .72rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .emp-name {
+            font-weight: 600;
+            color: var(--ink);
+            line-height: 1.2;
+        }
+
+        .emp-dept {
+            font-size: .72rem;
+            color: var(--muted);
+        }
+
+        .type-badge {
+            display: inline-block;
+            padding: 2px 9px;
+            background: var(--slate);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: .72rem;
+            font-weight: 600;
+        }
+
+        .plate-chip {
+            font-family: 'Familjen Grotesk',sans-serif;
+            font-weight: 800;
+            letter-spacing: 1.2px;
+            font-size: .78rem;
+            color: var(--ink);
+            background: var(--slate);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 2px 8px;
+        }
+
+        .amt {
+            font-family: 'Familjen Grotesk',sans-serif;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .muted-sm {
+            color: var(--muted);
+            font-size: .8rem;
+            white-space: nowrap;
+        }
+
+        .desc-cell {
+            max-width: 170px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: block;
+        }
+
+        .act-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            justify-content: center;
+        }
+
+        .act {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1.5px solid transparent;
+            font-size: .76rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all .14s;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+
+        .act-view {
+            background: var(--slate);
+            color: var(--muted);
+            border-color: var(--border);
+        }
+
+            .act-view:hover {
+                color: var(--ink);
+                border-color: var(--ink-2);
+            }
+
+        .act-approve {
+            background: #ecfdf5;
+            color: var(--green);
+            border-color: #a7f3d0;
+        }
+
+            .act-approve:hover {
+                background: var(--green);
+                color: #fff;
+                border-color: var(--green);
+            }
+
+        .act-reject {
+            background: #fef2f2;
+            color: var(--red);
+            border-color: #fecaca;
+        }
+
+            .act-reject:hover {
+                background: var(--red);
+                color: #fff;
+                border-color: var(--red);
+            }
+
+        .empty-box {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--muted);
+        }
+
+            .empty-box i {
+                font-size: 2.2rem;
+                opacity: .25;
+                display: block;
+                margin-bottom: .6rem;
+            }
+
+        .m-label {
+            font-size: .8rem;
+            font-weight: 600;
+            color: var(--text);
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .m-input {
+            width: 100%;
+            padding: .6rem .8rem;
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: .86rem;
+            outline: none;
+        }
+
+        @@media (max-width: 768px) {
+            .kpi-strip {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+}
+
+<div class="page-hd">
+    <h1 class="page-hd-title">
+        <i class="bi bi-patch-check-fill" style="color:var(--green);font-size:1.15rem"></i>
+        For Approval
+    </h1>
+    <div class="page-hd-sub">Review expenses already approved by Supervisors</div>
+</div>
+
+<div class="kpi-strip">
+    <div class="kpi-chip">
+        <div class="kpi-icon"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+            <div class="kpi-label">Awaiting Your Approval</div>
+            <div class="kpi-sub">Expense(s) from Supervisors</div>
+        </div>
+        <div class="kpi-val">@pendingCount</div>
+    </div>
+    <div class="kpi-chip">
+        <div class="kpi-icon"><i class="bi bi-cash-stack"></i></div>
+        <div>
+            <div class="kpi-label">Total Pending Amount</div>
+            <div class="kpi-sub">Combined value</div>
+        </div>
+        <div class="kpi-val">&#8369;@String.Format("{0:N0}", pendingAmt)</div>
+    </div>
+</div>
+
+<!-- Filter -->
+<div class="filter-bar">
+    <form method="get" asp-controller="Department" asp-action="ForApproval" class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label class="fl-label">Search</label>
+            <input type="search" name="search" class="fl-input"
+                   placeholder="Employee, type, description or plate…" value="@ViewBag.Search" />
+        </div>
+        <div class="col-md-3">
+            <label class="fl-label">Date From</label>
+            <input type="date" name="dateFrom" class="fl-input" value="@ViewBag.DateFrom" />
+        </div>
+        <div class="col-md-3">
+            <label class="fl-label">Date To</label>
+            <input type="date" name="dateTo" class="fl-input" value="@ViewBag.DateTo" />
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+            <button type="submit" class="fl-btn fl-primary flex-grow-1"><i class="bi bi-funnel"></i> Filter</button>
+            <a asp-controller="Department" asp-action="ForApproval" class="fl-btn fl-ghost"><i class="bi bi-x-lg"></i></a>
+        </div>
+    </form>
+</div>
+
+<div class="tc">
+    <div class="tc-head">
+        <h6 class="tc-title">
+            <i class="bi bi-list-check" style="color:var(--green)"></i>
+            Expenses Awaiting Department Head Approval
+            @if (pendingCount > 0)
+            {
+                <span class="pill">@pendingCount pending</span>
+            }
+        </h6>
+        <span style="font-size:.76rem;color:var(--muted)">Showing @(Model?.Count() ?? 0) result(s)</span>
+    </div>
+
+    @if (Model != null && Model.Any())
+    {
+        <div style="overflow-x:auto">
+            <table class="tbl">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Employee</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>Vehicle</th>
+                        <th>Amount</th>
+                        <th>Expense Date</th>
+                        <th>Submitted</th>
+                        <th style="text-align:center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var e in Model)
+                    {
+                        var name = e.User?.FullName ?? e.User?.UserName ?? "Unknown";
+                        var dept = e.User?.Department ?? "—";
+                        var initial = name.Length > 0 ? name[0].ToString().ToUpper() : "?";
+
+                        <tr>
+                            <td class="id-cell">@e.Id</td>
+                            <td>
+                                <div class="emp-cell">
+                                    <div class="av">@initial</div>
+                                    <div>
+                                        <div class="emp-name">@name</div>
+                                        <div class="emp-dept">@dept</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="desc-cell" title="@e.Description">@e.Description</span></td>
+                            <td><span class="type-badge">@e.ExpenseType</span></td>
+                            <td>
+                                @if (string.IsNullOrWhiteSpace(e.PlateNumber))
+                                {
+                                    <span class="muted-sm">—</span>
+                                }
+                                else
+                                {
+                                    <span class="plate-chip">@e.PlateNumber</span>
+                                }
+                            </td>
+                            <td><span class="amt">&#8369;@String.Format("{0:N2}", e.Amount)</span></td>
+                            <td class="muted-sm">@e.ExpenseDate.ToString("MMM dd, yyyy")</td>
+                            <td class="muted-sm">@e.DateSubmitted.ToString("MMM dd, yyyy")</td>
+                            <td>
+                                <div class="act-group">
+                                    <a asp-controller="Department" asp-action="Details" asp-route-id="@e.Id" class="act act-view">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+                                    <button type="button" class="act act-approve"
+                                            data-bs-toggle="modal" data-bs-target="#dfApproveModal"
+                                            data-expense-id="@e.Id">
+                                        <i class="bi bi-check-lg"></i> Approve
+                                    </button>
+                                    <button type="button" class="act act-reject"
+                                            data-bs-toggle="modal" data-bs-target="#dfRejectModal"
+                                            data-expense-id="@e.Id">
+                                        <i class="bi bi-x-lg"></i> Reject
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-box">
+            <i class="bi bi-patch-check"></i>
+            <p class="mb-0">No expenses awaiting your approval.<br>All caught up!</p>
+        </div>
+    }
+</div>
+
+<!-- Approve modal -->
+<div class="modal fade" id="dfApproveModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" id="dfApproveForm" style="border-radius:14px;border:none">
+            @Html.AntiForgeryToken()
+            <div class="modal-header">
+                <h6 class="modal-title" style="color:var(--green);font-weight:700">
+                    <i class="bi bi-check-circle"></i> Approve Expense <span id="dfApproveId"></span>
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:.86rem;color:var(--muted)">This expense will be forwarded to Accounting.</p>
+                <label class="m-label">Remarks (optional)</label>
+                <textarea name="remarks" id="dfApproveRemarks" rows="3" class="m-input"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="fl-btn fl-primary"><i class="bi bi-check-lg"></i> Yes, Approve</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Reject modal -->
+<div class="modal fade" id="dfRejectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" id="dfRejectForm" style="border-radius:14px;border:none">
+            @Html.AntiForgeryToken()
+            <div class="modal-header">
+                <h6 class="modal-title" style="color:var(--red);font-weight:700">
+                    <i class="bi bi-x-octagon"></i> Reject Expense <span id="dfRejectId"></span>
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="m-label">Reason category</label>
+                <input type="text" name="rejectionReason" id="dfRejectCategory" class="m-input mb-3"
+                       maxlength="100" placeholder="e.g. Exceeds budget" />
+                <label class="m-label">Remarks <span style="color:var(--red)">*</span></label>
+                <textarea name="remarks" id="dfRejectRemarks" rows="3" class="m-input" required
+                          placeholder="Explain why this expense is rejected"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="fl-btn" style="background:var(--red);color:#fff">
+                    <i class="bi bi-x-circle"></i> Confirm Rejection
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('dfApproveModal')?.addEventListener('show.bs.modal', function (e) {
+            var id = e.relatedTarget.getAttribute('data-expense-id');
+            document.getElementById('dfApproveForm').action = '/Department/Approve/' + id;
+            document.getElementById('dfApproveId').textContent = '#' + id;
+            document.getElementById('dfApproveRemarks').value = '';
+        });
+        document.getElementById('dfRejectModal')?.addEventListener('show.bs.modal', function (e) {
+            var id = e.relatedTarget.getAttribute('data-expense-id');
+            document.getElementById('dfRejectForm').action = '/Department/Reject/' + id;
+            document.getElementById('dfRejectId').textContent = '#' + id;
+            document.getElementById('dfRejectRemarks').value = '';
+            document.getElementById('dfRejectCategory').value = '';
+        });
+    </script>
+}

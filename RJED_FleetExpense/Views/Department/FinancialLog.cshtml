@@ -1,0 +1,661 @@
+﻿@model IEnumerable<RJED_FleetExpense.Models.Expense>
+
+@functions {
+    public string PageUrl(
+        int p,
+        dynamic ViewBag,
+        string sortBy,
+        IUrlHelper Url)
+    {
+        return Url.Action("FinancialLog", "Department", new
+        {
+            search = ViewBag.Search,
+            status = ViewBag.Status,
+            expenseType = ViewBag.ExpenseType,
+            dateFrom = ViewBag.DateFrom,
+            dateTo = ViewBag.DateTo,
+            sortBy = sortBy,
+            page = p
+        });
+    }
+}
+
+@{
+    ViewData["Title"] = "Financial Log";
+    Layout = "~/Views/Shared/_LayoutDepartment.cshtml";
+
+    int page = (int)(ViewBag.Page ?? 1);
+    int totalPages = (int)(ViewBag.TotalPages ?? 1);
+    int totalCount = (int)(ViewBag.TotalCount ?? 0);
+
+    decimal filteredTotal = (decimal)(ViewBag.FilteredTotal ?? 0m);
+    decimal filteredApproved = (decimal)(ViewBag.FilteredApproved ?? 0m);
+    decimal filteredPending = (decimal)(ViewBag.FilteredPending ?? 0m);
+    decimal filteredRejected = (decimal)(ViewBag.FilteredRejected ?? 0m);
+
+    string sortBy = ViewBag.SortBy ?? "date_desc";
+
+    var expTypes = ViewBag.ExpenseTypes as IEnumerable<string>
+                   ?? Enumerable.Empty<string>();
+
+    // Statuses that count as "Approved" in this screen
+    var approvedSet = new[] { "DepartmentApproved", "ForAccounting", "Reimbursed" };
+
+    string currentStatus = ViewBag.Status as string ?? "";
+    string currentType = ViewBag.ExpenseType as string ?? "";
+
+    bool hasFilters = !string.IsNullOrEmpty(ViewBag.Search as string)
+                   || !string.IsNullOrEmpty(currentStatus)
+                   || !string.IsNullOrEmpty(currentType)
+                   || !string.IsNullOrEmpty(ViewBag.DateFrom as string)
+                   || !string.IsNullOrEmpty(ViewBag.DateTo as string);
+
+    string exportFilename =
+        "FinancialLog_" +
+        DateTime.Now.ToString("yyyyMMdd") +
+        ".csv";
+}
+
+@section Styles {
+    <style>
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.4rem;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 4px solid transparent;
+            border-radius: 12px;
+            padding: 1.05rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            opacity: 0;
+            transform: translateY(10px);
+            animation: rise 0.38s ease forwards;
+        }
+
+            .stat-card:nth-child(1) {
+                border-left-color: #3b82f6;
+                animation-delay: 0s;
+            }
+
+            .stat-card:nth-child(2) {
+                border-left-color: var(--green);
+                animation-delay: 0.06s;
+            }
+
+            .stat-card:nth-child(3) {
+                border-left-color: #f59e0b;
+                animation-delay: 0.12s;
+            }
+
+            .stat-card:nth-child(4) {
+                border-left-color: var(--red);
+                animation-delay: 0.18s;
+            }
+
+        .stat-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .stat-label {
+            font-size: 0.68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .stat-sub {
+            font-size: 0.7rem;
+            color: var(--muted);
+        }
+
+        .stat-value {
+            margin-left: auto;
+            text-align: right;
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1.1;
+        }
+
+        .sc {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+            margin-bottom: 1.4rem;
+        }
+
+        .sc-head {
+            padding: 0.85rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: .6rem;
+        }
+
+        .sc-title {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sc-body {
+            padding: 1rem 1.2rem;
+        }
+
+        .range-label {
+            font-size: .78rem;
+            color: var(--muted);
+        }
+
+        /* Filters */
+        .fp-row {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            flex-wrap: wrap;
+        }
+
+        .fp-lbl {
+            font-size: .68rem;
+            color: var(--muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .6px;
+        }
+
+        .fp-inp {
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 11px;
+            font-size: .82rem;
+            background: #fff;
+            color: var(--text);
+        }
+
+            .fp-inp:focus {
+                outline: none;
+                border-color: var(--ink-2);
+            }
+
+        .search-wrap {
+            position: relative;
+        }
+
+            .search-wrap i {
+                position: absolute;
+                left: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--muted);
+                font-size: .8rem;
+            }
+
+            .search-wrap .fp-inp {
+                padding-left: 30px;
+                width: 220px;
+            }
+
+        .f-btn {
+            padding: 7px 14px;
+            border-radius: 8px;
+            border: none;
+            font-size: .82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+
+        .f-btn-primary {
+            background: var(--ink);
+            color: #fff;
+        }
+
+            .f-btn-primary:hover {
+                color: #fff;
+                opacity: .9;
+            }
+
+        .f-btn-ghost {
+            background: var(--slate);
+            border: 1.5px solid var(--border);
+            color: var(--muted);
+        }
+
+            .f-btn-ghost:hover {
+                color: var(--ink);
+                border-color: var(--ink-2);
+            }
+
+        .f-btn-green {
+            background: #ecfdf5;
+            border: 1.5px solid #a7f3d0;
+            color: #065f46;
+        }
+
+            .f-btn-green:hover {
+                color: #065f46;
+                border-color: #6ee7b7;
+            }
+
+        /* Table */
+        .ex-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .ex-table thead th {
+                background: #f8faff;
+                color: var(--muted);
+                font-size: 0.66rem;
+                text-transform: uppercase;
+                letter-spacing: .6px;
+                padding: 0.7rem 1rem;
+                text-align: left;
+                white-space: nowrap;
+            }
+
+            .ex-table tbody td {
+                padding: 0.78rem 1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: .84rem;
+                vertical-align: middle;
+            }
+
+            .ex-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .ex-table tbody tr:hover {
+                background: #f8faff;
+            }
+
+        .amt {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-weight: 700;
+            color: var(--ink);
+            white-space: nowrap;
+        }
+
+        .desc-cell {
+            max-width: 260px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .st {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .st-ok {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .st-pend {
+            background: #fffbeb;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        .st-rej {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .type-tag {
+            display: inline-block;
+            background: #f1f5f9;
+            color: var(--ink);
+            padding: 2px 9px;
+            border-radius: 6px;
+            font-size: .76rem;
+            font-weight: 600;
+        }
+
+        /* Pager */
+        .pager {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: .75rem 1.2rem;
+            border-top: 1px solid var(--border);
+            background: #f8faff;
+            flex-wrap: wrap;
+            gap: .75rem;
+            font-size: .78rem;
+            color: var(--muted);
+        }
+
+        .page-btns {
+            display: flex;
+            gap: 4px;
+        }
+
+        .pg-btn {
+            min-width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1.5px solid var(--border);
+            background: #fff;
+            color: var(--ink);
+            font-size: .78rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+        }
+
+            .pg-btn:hover {
+                border-color: var(--ink-2);
+                color: var(--ink);
+            }
+
+            .pg-btn.active {
+                background: var(--ink);
+                color: #fff;
+                border-color: var(--ink);
+            }
+
+        .empty-box {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: var(--muted);
+        }
+
+            .empty-box i {
+                font-size: 2rem;
+                opacity: .25;
+                display: block;
+                margin-bottom: .5rem;
+            }
+
+        @@keyframes rise {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@media (max-width: 1200px) {
+            .stat-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @@media (max-width: 575px) {
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .search-wrap .fp-inp {
+                width: 100%;
+            }
+        }
+    </style>
+}
+
+<!-- Stat Cards -->
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#eff6ff;color:#3b82f6">
+            <i class="bi bi-wallet2"></i>
+        </div>
+        <div>
+            <div class="stat-label">Total (Filtered)</div>
+            <div class="stat-sub">All statuses</div>
+        </div>
+        <div class="stat-value">&#8369;@String.Format("{0:N0}", filteredTotal)</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#ecfdf5;color:var(--green)">
+            <i class="bi bi-check2-circle"></i>
+        </div>
+        <div>
+            <div class="stat-label">Approved</div>
+            <div class="stat-sub">Filtered</div>
+        </div>
+        <div class="stat-value">&#8369;@String.Format("{0:N0}", filteredApproved)</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fff7ed;color:#f59e0b">
+            <i class="bi bi-hourglass-split"></i>
+        </div>
+        <div>
+            <div class="stat-label">Pending</div>
+            <div class="stat-sub">Filtered</div>
+        </div>
+        <div class="stat-value">&#8369;@String.Format("{0:N0}", filteredPending)</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fef2f2;color:var(--red)">
+            <i class="bi bi-x-circle"></i>
+        </div>
+        <div>
+            <div class="stat-label">Rejected</div>
+            <div class="stat-sub">Filtered</div>
+        </div>
+        <div class="stat-value">&#8369;@String.Format("{0:N0}", filteredRejected)</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<form method="get"
+      asp-controller="Department"
+      asp-action="FinancialLog"
+      id="filterForm">
+
+    <input type="hidden" name="sortBy" value="@sortBy" />
+    <input type="hidden" name="page" value="1" />
+
+    <div class="sc">
+        <div class="sc-body">
+            <div class="fp-row">
+                <div class="search-wrap">
+                    <i class="bi bi-search"></i>
+                    <input type="search" name="search" class="fp-inp" placeholder="Search..." value="@ViewBag.Search" />
+                </div>
+
+                <select name="status" class="fp-inp">
+                    <option value="">All Status</option>
+                    <option value="Pending" selected="@(currentStatus == "Pending")">Pending</option>
+                    <option value="Approved" selected="@(currentStatus == "Approved")">Approved</option>
+                    <option value="Rejected" selected="@(currentStatus == "Rejected")">Rejected</option>
+                </select>
+
+                <select name="expenseType" class="fp-inp">
+                    <option value="">All Types</option>
+                    @foreach (var et in expTypes)
+                    {
+                        <option value="@et" selected="@(currentType == et)">@et</option>
+                    }
+                </select>
+
+                <label class="fp-lbl" for="dateFrom">From</label>
+                <input type="date" id="dateFrom" name="dateFrom" class="fp-inp" value="@ViewBag.DateFrom" />
+
+                <label class="fp-lbl" for="dateTo">To</label>
+                <input type="date" id="dateTo" name="dateTo" class="fp-inp" value="@ViewBag.DateTo" />
+
+                <button type="submit" class="f-btn f-btn-primary"><i class="bi bi-funnel"></i> Search</button>
+
+                @if (hasFilters)
+                {
+                    <a asp-controller="Department" asp-action="FinancialLog" class="f-btn f-btn-ghost">Reset</a>
+                }
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Records -->
+<div class="sc">
+    <div class="sc-head">
+        <h6 class="sc-title"><i class="bi bi-journal-text"></i> Transaction Records</h6>
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <span class="range-label">@totalCount total record(s) &mdash; Page @(page) of @(totalPages)</span>
+            <a href="#" onclick="exportCSV(); return false;" class="f-btn f-btn-green">
+                <i class="bi bi-download"></i> Export CSV
+            </a>
+        </div>
+    </div>
+
+    @if (Model != null && Model.Any())
+    {
+        <div style="overflow-x:auto">
+            <table class="ex-table" id="logTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Submitted</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        int rowNum = (page - 1) * 15 + 1;
+                    }
+                    @foreach (var e in Model)
+                    {
+                        <tr>
+                            <td style="color:var(--muted);font-size:.78rem">@(rowNum++)</td>
+                            <td style="white-space:nowrap">@(e.ExpenseDate.ToString("MMM dd, yyyy"))</td>
+                            <td class="desc-cell" title="@e.Description">@e.Description</td>
+                            <td><span class="type-tag">@e.ExpenseType</span></td>
+                            <td class="amt">&#8369;@(e.Amount.ToString("N2"))</td>
+                            <td>
+                                @if (approvedSet.Contains(e.Status))
+                                {
+                                    <span class="st st-ok"><i class="bi bi-check-circle-fill"></i> Approved</span>
+                                }
+                                else if (e.Status == "Rejected")
+                                {
+                                    <span class="st st-rej"><i class="bi bi-x-circle-fill"></i> Rejected</span>
+                                }
+                                else
+                                {
+                                    <span class="st st-pend"><i class="bi bi-hourglass-split"></i> Pending</span>
+                                }
+                            </td>
+                            <td style="white-space:nowrap;color:var(--muted);font-size:.8rem">@(e.DateSubmitted.ToString("MMM dd, yyyy"))</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pager">
+            <div>
+                Showing @((page - 1) * 15 + 1) &ndash; @Math.Min(page * 15, totalCount) of @totalCount
+            </div>
+
+            <div class="page-btns">
+                <a href="@(page > 1 ? PageUrl(1, ViewBag, sortBy, Url) : "#")" class="pg-btn">&laquo;</a>
+                <a href="@(page > 1 ? PageUrl(page - 1, ViewBag, sortBy, Url) : "#")" class="pg-btn">&lsaquo;</a>
+
+                @for (int p = Math.Max(1, page - 2); p <= Math.Min(totalPages, page + 2); p++)
+                {
+                    <a href="@PageUrl(p, ViewBag, sortBy, Url)" class="pg-btn @(p == page ? "active" : "")">@p</a>
+                }
+
+                <a href="@(page < totalPages ? PageUrl(page + 1, ViewBag, sortBy, Url) : "#")" class="pg-btn">&rsaquo;</a>
+                <a href="@(page < totalPages ? PageUrl(totalPages, ViewBag, sortBy, Url) : "#")" class="pg-btn">&raquo;</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="empty-box">
+            <i class="bi bi-inbox"></i>
+            <p class="mb-0">@(hasFilters ? "No records match your filters." : "No transactions yet.")</p>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        var exportFilename = '@exportFilename';
+
+        function exportCSV() {
+            var tbl = document.getElementById('logTable');
+
+            if (!tbl) {
+                alert('No data to export.');
+                return;
+            }
+
+            var rows = [];
+            var headers = [];
+
+            tbl.querySelectorAll('thead th').forEach(function (th) {
+                headers.push('"' + th.innerText.trim() + '"');
+            });
+
+            rows.push(headers.join(','));
+
+            tbl.querySelectorAll('tbody tr').forEach(function (tr) {
+                var cols = [];
+
+                tr.querySelectorAll('td').forEach(function (td) {
+                    cols.push('"' + td.innerText.trim().replace(/"/g, '""') + '"');
+                });
+
+                rows.push(cols.join(','));
+            });
+
+            var blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = exportFilename;
+            a.click();
+        }
+    </script>
+}

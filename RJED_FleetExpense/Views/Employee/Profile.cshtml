@@ -1,0 +1,312 @@
+﻿@{
+    ViewData["Title"] = "My Profile";
+    Layout = "~/Views/Shared/_LayoutEmployee.cshtml";
+}
+
+@model RJED_FleetExpense.Data.ApplicationUser
+
+@section Styles {
+    <style>
+        .sc {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(15,22,35,0.04);
+        }
+
+        .sc-head {
+            padding: 0.85rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sc-title {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sc-body {
+            padding: 1.3rem 1.4rem;
+        }
+
+        .avatar-big {
+            width: 96px;
+            height: 96px;
+            border-radius: 20px;
+            background: var(--ink);
+            color: #fff;
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 2.4rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+        }
+
+        .profile-name {
+            font-family: 'Familjen Grotesk', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin-bottom: 2px;
+        }
+
+        .profile-sub {
+            font-size: .8rem;
+            color: var(--muted);
+            margin-bottom: 2px;
+        }
+
+        .st {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .st-ok {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .st-acc {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+
+        .field-label {
+            font-size: .68rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .field-wrap {
+            display: flex;
+            align-items: center;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+            .field-wrap:focus-within {
+                border-color: var(--ink);
+            }
+
+            .field-wrap.readonly {
+                background: var(--slate);
+            }
+
+        .field-icon {
+            padding: 8px 12px;
+            background: var(--slate);
+            border-right: 1.5px solid var(--border);
+            color: var(--muted);
+            font-size: .85rem;
+        }
+
+        .field-wrap input {
+            flex: 1;
+            border: none;
+            padding: 8px 12px;
+            font-size: .84rem;
+            color: var(--text);
+            background: transparent;
+            outline: none;
+            min-width: 0;
+        }
+
+            .field-wrap input[readonly] {
+                color: var(--muted);
+            }
+
+        .field-hint {
+            font-size: .72rem;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        .btn-main {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--ink);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 20px;
+            font-size: .84rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+            .btn-main:hover {
+                opacity: .9;
+            }
+
+        .btn-ghost {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--slate);
+            color: var(--muted);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 7px 18px;
+            font-size: .84rem;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+            .btn-ghost:hover {
+                color: var(--ink);
+                border-color: var(--ink);
+            }
+    </style>
+}
+
+<!-- Alerts -->
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row g-4">
+
+    <!-- Left: profile card -->
+    <div class="col-lg-4">
+        <div class="sc">
+            <div class="sc-body text-center py-4">
+                <div class="avatar-big">
+                    @(Model?.FullName?.FirstOrDefault() ?? Model?.UserName?.FirstOrDefault() ?? '?')
+                </div>
+
+                <div class="profile-name">@(Model?.FullName ?? Model?.UserName ?? "Employee")</div>
+                <div class="profile-sub">@(Model?.Email ?? "—")</div>
+
+                @if (!string.IsNullOrEmpty(Model?.PhoneNumber))
+                {
+                    <div class="profile-sub"><i class="bi bi-telephone-fill me-1"></i>@Model.PhoneNumber</div>
+                }
+                else
+                {
+                    <div class="profile-sub fst-italic">No phone number set</div>
+                }
+
+                <hr style="border-color:var(--border);margin:1.3rem 0" />
+
+                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                    <span class="st st-ok"><i class="bi bi-shield-check"></i> Active Account</span>
+                    <span class="st st-acc"><i class="bi bi-person-badge"></i> Employee</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: edit form -->
+    <div class="col-lg-8">
+        <div class="sc">
+            <div class="sc-head">
+                <h6 class="sc-title"><i class="bi bi-pencil-square"></i> Edit Personal Information</h6>
+            </div>
+            <div class="sc-body">
+
+                <form asp-controller="EmployeeDashboard" asp-action="Profile" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <div class="row g-3">
+
+                        <div class="col-md-6">
+                            <label asp-for="FullName" class="field-label">Full Name</label>
+                            <div class="field-wrap">
+                                <span class="field-icon"><i class="bi bi-person"></i></span>
+                                <input asp-for="FullName" placeholder="Your full name" required />
+                            </div>
+                            <span asp-validation-for="FullName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="field-label">Email Address</label>
+                            <div class="field-wrap readonly">
+                                <span class="field-icon"><i class="bi bi-envelope"></i></span>
+                                <input asp-for="Email" type="email" readonly title="Email cannot be changed" />
+                            </div>
+                            <div class="field-hint">Email cannot be changed.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="PhoneNumber" class="field-label">Phone Number</label>
+                            <div class="field-wrap">
+                                <span class="field-icon"><i class="bi bi-telephone"></i></span>
+                                <input asp-for="PhoneNumber" placeholder="e.g. +639171234567" />
+                            </div>
+                            <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="field-label">Employee ID / Badge Number</label>
+                            <div class="field-wrap">
+                                <span class="field-icon"><i class="bi bi-card-heading"></i></span>
+                                <input type="text" name="EmployeeId" value="@(ViewBag.EmployeeId ?? "")" placeholder="Your company ID" />
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="field-label">Username</label>
+                            <div class="field-wrap readonly">
+                                <span class="field-icon"><i class="bi bi-at"></i></span>
+                                <input asp-for="UserName" readonly title="Username cannot be changed" />
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4 pt-3" style="border-top:1px solid var(--border)">
+                        <a asp-controller="EmployeeController" asp-action="Dashboard" class="btn-ghost">
+                            <i class="bi bi-arrow-left"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn-main">
+                            <i class="bi bi-save"></i> Save Changes
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

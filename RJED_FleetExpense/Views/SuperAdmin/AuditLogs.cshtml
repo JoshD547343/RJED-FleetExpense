@@ -1,0 +1,829 @@
+﻿@model IEnumerable<RJED_FleetExpense.Models.AuditLog>
+
+@{
+    ViewData["Title"] = "Audit Logs";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    string view = ViewBag.View as string ?? "logins";
+    var search = ViewBag.Search as string ?? "";
+    var actionType = ViewBag.ActionType as string ?? "";
+    var tableAffected = ViewBag.TableAffected as string ?? "";
+    var dateFrom = ViewBag.DateFrom as string ?? "";
+    var dateTo = ViewBag.DateTo as string ?? "";
+    var page = (int)(ViewBag.Page ?? 1);
+    var totalPages = (int)(ViewBag.TotalPages ?? 1);
+    var total = (int)(ViewBag.Total ?? 0);
+    var tables = ViewBag.Tables as List<string> ?? new List<string>();
+    var logs = Model?.ToList() ?? new List<RJED_FleetExpense.Models.AuditLog>();
+    var userRows = ViewBag.UserRows as List<RJED_FleetExpense.Models.UserLoginRow>
+                   ?? new List<RJED_FleetExpense.Models.UserLoginRow>();
+
+    bool hasFilters = search != "" || actionType != "" || tableAffected != "" || dateFrom != "" || dateTo != "";
+
+    var tabs = new (string Key, string Title, string Icon, string Desc)[]
+    {
+        ("logins", "Login Activity",    "bi-box-arrow-in-right", "Every login, logout and failed sign-in attempt across all users."),
+        ("users",  "User Login Status", "bi-people",             "Each user's most recent login, login count and failed attempts."),
+        ("all",    "All Activity",      "bi-journal-text",       "Full system history: logins, creates, updates, deletes and rejections.")
+    };
+    var current = tabs.First(t => t.Key == view);
+
+    string PageUrl(string v, int? p = null) => Url.Action("AuditLogs", "Dashboard", new
+    {
+        view = v,
+        search,
+        actionType,
+        tableAffected,
+        dateFrom,
+        dateTo,
+        page = p
+    })!;
+
+    string ExportUrl() => Url.Action("ExportAuditLogs", "Dashboard", new
+    {
+        view,
+        search,
+        actionType,
+        tableAffected,
+        dateFrom,
+        dateTo
+    })!;
+
+    string HistoryUrl(string email) => Url.Action("AuditLogs", "Dashboard", new
+    {
+        view = "logins",
+        search = email,
+        dateFrom,
+        dateTo
+    })!;
+
+    int loginsToday = (int)(ViewBag.LoginsToday ?? 0);
+    int usersToday = (int)(ViewBag.UsersToday ?? 0);
+    int failedRecent = (int)(ViewBag.FailedRecent ?? 0);
+    int neverLoggedIn = (int)(ViewBag.NeverLoggedIn ?? 0);
+}
+
+@functions {
+    string ActClass(string? action)
+    {
+        var a = (action ?? "").ToLower();
+        if (a.Contains("fail")) return "act-fail";
+        if (a.Contains("logout")) return "act-logout";
+        if (a.Contains("login")) return "act-login";
+        if (a.Contains("create")) return "act-create";
+        if (a.Contains("update")) return "act-update";
+        if (a.Contains("delete")) return "act-delete";
+        if (a.Contains("reject")) return "act-reject";
+        return "act-other";
+    }
+
+    string Ago(DateTime utc)
+    {
+        var diff = DateTime.UtcNow - utc;
+        if (diff.TotalMinutes < 1) return "just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes} min ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours} h ago";
+        if (diff.TotalDays < 30) return $"{(int)diff.TotalDays} d ago";
+        return utc.ToLocalTime().ToString("MMM dd, yyyy");
+    }
+
+    string Initial(string? name)
+        => string.IsNullOrWhiteSpace(name) ? "?" : name.Trim().Substring(0, 1).ToUpper();
+}
+
+@section Styles {
+    <style>
+        .log-page {
+            --navy: #14294f;
+            --green: #4caf50;
+            --card: #ffffff;
+            --border: #e6e9f2;
+            --muted: #6c757d;
+            --text: #343a40;
+        }
+
+        /* Tabs */
+        .report-tabs {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.9rem;
+        }
+
+        .report-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 10px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+            .report-tab:hover {
+                color: var(--navy);
+                border-color: #c8d6e5;
+            }
+
+            .report-tab.active {
+                background: var(--navy);
+                border-color: var(--navy);
+                color: #fff;
+                box-shadow: 0 4px 12px rgba(20,41,79,0.18);
+            }
+
+        .report-desc {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-export, .btn-refresh {
+            background: #fff;
+            color: var(--navy);
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 7px 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+            .btn-export:hover, .btn-refresh:hover {
+                background: var(--navy);
+                color: #fff;
+                border-color: var(--navy);
+            }
+
+        /* Section card */
+        .section-card {
+            background: var(--card);
+            border-radius: 14px;
+            box-shadow: 0 2px 12px rgba(20,41,79,0.06);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-card-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+            .section-card-header h6 {
+                font-size: 1rem;
+                font-weight: 700;
+                color: var(--navy);
+                margin: 0;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+        /* Filters */
+        .filter-bar {
+            display: flex;
+            gap: 0.6rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-wrap {
+            position: relative;
+        }
+
+            .search-wrap i {
+                position: absolute;
+                left: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--muted);
+                font-size: 0.85rem;
+            }
+
+        .filter-input, .filter-select {
+            padding: 7px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            background: #fff;
+            color: var(--text);
+        }
+
+        .search-input {
+            padding-left: 30px;
+            width: 230px;
+        }
+
+        .filter-input:focus, .filter-select:focus {
+            outline: none;
+            border-color: var(--navy);
+            box-shadow: 0 0 0 3px rgba(20,41,79,0.1);
+        }
+
+        .btn-filter {
+            background: var(--navy);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 7px 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+
+            .btn-filter:hover {
+                background: #1e3c72;
+            }
+
+        .btn-clear {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-decoration: none;
+            padding: 7px 8px;
+        }
+
+            .btn-clear:hover {
+                color: var(--navy);
+            }
+
+        /* Table */
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .log-table thead th {
+                background: var(--navy);
+                color: rgba(255,255,255,0.85);
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                letter-spacing: .6px;
+                font-weight: 600;
+                padding: 0.85rem 1.1rem;
+                text-align: left;
+                white-space: nowrap;
+            }
+
+            .log-table tbody td {
+                padding: 0.85rem 1.1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: 0.88rem;
+                color: var(--text);
+                vertical-align: middle;
+            }
+
+            .log-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .log-table tbody tr:hover {
+                background: #f5f8ff;
+            }
+
+        .time-main {
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .time-sub {
+            font-size: 0.72rem;
+            color: var(--muted);
+        }
+
+        .user-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+        }
+
+        .user-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #e8edf7;
+            color: var(--navy);
+            font-weight: 700;
+            font-size: 0.78rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .user-name {
+            font-weight: 600;
+        }
+
+        /* Badges */
+        .act-badge, .role-badge, .state-badge {
+            display: inline-block;
+            padding: 3px 11px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .act-login {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .act-logout {
+            background: #eceff1;
+            color: #546e7a;
+        }
+
+        .act-fail {
+            background: #fce4ec;
+            color: #c62828;
+        }
+
+        .act-create {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .act-update {
+            background: #e0f2f1;
+            color: #00695c;
+        }
+
+        .act-delete {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .act-reject {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .act-other {
+            background: #eceff1;
+            color: #546e7a;
+        }
+
+        .role-Super_Admin {
+            background: #fce4ec;
+            color: #880e4f;
+        }
+
+        .role-Admin {
+            background: #e8eaf6;
+            color: #283593;
+        }
+
+        .role-Supervisor {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .role-Department_head {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .role-Accounting {
+            background: #f3e5f5;
+            color: #6a1b9a;
+        }
+
+        .role-Employee {
+            background: #e0f2f1;
+            color: #00695c;
+        }
+
+        .state-active {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .state-inactive {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .state-never {
+            background: #fff8e1;
+            color: #f57f17;
+        }
+
+        .table-chip {
+            display: inline-block;
+            background: #eef0f8;
+            color: var(--navy);
+            padding: 2px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .details-cell {
+            color: var(--muted);
+            max-width: 380px;
+        }
+
+        .count-fail {
+            color: #c62828;
+            font-weight: 700;
+        }
+
+        .btn-drill {
+            background: #e8f0fe;
+            color: #1a56db;
+            border-radius: 6px;
+            padding: 0.3rem 0.75rem;
+            font-size: 0.82rem;
+            font-weight: 500;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+            .btn-drill:hover {
+                background: #1a56db;
+                color: #fff;
+            }
+
+        /* Pagination */
+        .pager {
+            display: flex;
+            gap: 0.35rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+            .pager a, .pager span {
+                padding: 5px 12px;
+                border-radius: 8px;
+                border: 1px solid var(--border);
+                font-size: 0.82rem;
+                font-weight: 600;
+                text-decoration: none;
+                color: var(--navy);
+                background: #fff;
+            }
+
+                .pager a:hover {
+                    background: #eef0f8;
+                }
+
+            .pager .current {
+                background: var(--navy);
+                border-color: var(--navy);
+                color: #fff;
+            }
+
+            .pager .disabled {
+                color: #b0b7c3;
+                pointer-events: none;
+                background: #f8f9fa;
+            }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--muted);
+        }
+
+            .empty-state i {
+                font-size: 2.5rem;
+                display: block;
+                margin-bottom: 0.75rem;
+                opacity: 0.4;
+            }
+
+        @@media (max-width: 575px) {
+            .search-input {
+                width: 100%;
+            }
+        }
+    </style>
+}
+
+<div class="log-page">
+
+    <!-- Page Title -->
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+        <div>
+            <h4 class="fw-bold mb-0" style="color:var(--navy)">Audit Logs</h4>
+            <small class="text-muted">Super Admin view &middot; @DateTime.Now.ToString("dddd, MMMM dd, yyyy")</small>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="@PageUrl(view)" class="btn-refresh"><i class="bi bi-arrow-clockwise"></i> Refresh</a>
+            @if (view != "users")
+            {
+                <a href="@ExportUrl()" class="btn-export"><i class="bi bi-download"></i> Export CSV</a>
+            }
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="report-tabs">
+        @foreach (var t in tabs)
+        {
+            <a href="@PageUrl(t.Key)" class="report-tab @(t.Key == view ? "active" : "")">
+                <i class="bi @t.Icon"></i> @t.Title
+            </a>
+        }
+    </div>
+    <div class="report-desc"><i class="bi bi-info-circle me-1"></i>@current.Desc</div>
+
+    <!-- Stat Cards -->
+    <div class="stat-grid">
+        <div class="stat-card" style="border-top-color:var(--accent);">
+            <div class="stat-icon" style="background:#e8f5e9;color:#2e7d32"><i class="bi bi-box-arrow-in-right"></i></div>
+            <div class="stat-info">
+                <div class="stat-label">Logins Today</div>
+                <div class="stat-sub">Successful sign-ins</div>
+            </div>
+            <div class="stat-value">@loginsToday</div>
+        </div>
+        <div class="stat-card" style="border-top-color:#1976d2;">
+            <div class="stat-icon" style="background:#e3f2fd;color:#1565c0"><i class="bi bi-person-check"></i></div>
+            <div class="stat-info">
+                <div class="stat-label">Users Logged In Today</div>
+                <div class="stat-sub">Distinct accounts</div>
+            </div>
+            <div class="stat-value">@usersToday</div>
+        </div>
+        <div class="stat-card" style="border-top-color:#e53935;">
+            <div class="stat-icon" style="background:#fce4ec;color:#c62828"><i class="bi bi-shield-exclamation"></i></div>
+            <div class="stat-info">
+                <div class="stat-label">Failed Attempts</div>
+                <div class="stat-sub">Last 24 hours</div>
+            </div>
+            <div class="stat-value">@failedRecent</div>
+        </div>
+        @if (view == "users")
+        {
+            <div class="stat-card" style="border-top-color:#ff9800;">
+                <div class="stat-icon" style="background:#fff3e0;color:#ef6c00"><i class="bi bi-person-dash"></i></div>
+                <div class="stat-info">
+                    <div class="stat-label">Never Logged In</div>
+                    <div class="stat-sub">In the selected period</div>
+                </div>
+                <div class="stat-value">@neverLoggedIn</div>
+            </div>
+        }
+        else
+        {
+            <div class="stat-card">
+                <div class="stat-icon" style="background:#eef0f8;color:#14294f"><i class="bi bi-list-check"></i></div>
+                <div class="stat-info">
+                    <div class="stat-label">Matching Events</div>
+                    <div class="stat-sub">@(hasFilters ? "With current filters" : "All time")</div>
+                </div>
+                <div class="stat-value">@total</div>
+            </div>
+        }
+    </div>
+
+    <!-- Log body -->
+    <div class="section-card">
+        <div class="section-card-header">
+            <h6><i class="bi @current.Icon"></i> @current.Title</h6>
+
+            <form method="get" action="@Url.Action("AuditLogs", "Dashboard")" class="filter-bar" id="searchForm">
+                <input type="hidden" name="view" value="@view" />
+                <div class="search-wrap">
+                    <i class="bi bi-search"></i>
+                    <input type="text" name="search" id="searchInput" class="filter-input search-input"
+                           placeholder="@(view == "users" ? "Name, email, role..." : "User, action, details...")"
+                           value="@search" autocomplete="off" />
+                </div>
+
+                @if (view != "users")
+                {
+                    <select name="actionType" class="filter-select">
+                        <option value="" selected="@(actionType == "")">All Actions</option>
+                        <option value="login" selected="@(actionType == "login")">Login</option>
+                        <option value="logout" selected="@(actionType == "logout")">Logout</option>
+                        <option value="failed" selected="@(actionType == "failed")">Failed login</option>
+                        @if (view == "all")
+                        {
+                            <option value="create" selected="@(actionType == "create")">Create</option>
+                            <option value="update" selected="@(actionType == "update")">Update</option>
+                            <option value="delete" selected="@(actionType == "delete")">Delete</option>
+                            <option value="reject" selected="@(actionType == "reject")">Reject</option>
+                        }
+                    </select>
+                }
+
+                @if (view == "all")
+                {
+                    <select name="tableAffected" class="filter-select">
+                        <option value="" selected="@(tableAffected == "")">All Tables</option>
+                        @foreach (var tb in tables)
+                        {
+                            <option value="@tb" selected="@(tableAffected == tb)">@tb</option>
+                        }
+                    </select>
+                }
+
+                <input type="date" name="dateFrom" class="filter-input" value="@dateFrom" title="From date" />
+                <input type="date" name="dateTo" class="filter-input" value="@dateTo" title="To date" />
+                <button type="submit" class="btn-filter"><i class="bi bi-funnel"></i> Filter</button>
+                @if (hasFilters)
+                {
+                    <a href="@Url.Action("AuditLogs", "Dashboard", new { view })" class="btn-clear">Clear</a>
+                }
+            </form>
+        </div>
+
+        @if (view == "users")
+        {
+            @* ───── USER LOGIN STATUS ───── *@
+            if (userRows.Any())
+            {
+                <div class="table-responsive">
+                    <table class="log-table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Role</th>
+                                <th>Department</th>
+                                <th>Last Login</th>
+                                <th>Logins</th>
+                                <th>Failed</th>
+                                <th>Account</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var u in userRows)
+                            {
+                                var display = string.IsNullOrWhiteSpace(u.FullName) ? u.Email : u.FullName;
+                                <tr>
+                                    <td>
+                                        <div class="user-cell">
+                                            <span class="user-avatar">@Initial(display)</span>
+                                            <div>
+                                                <div class="user-name">@display</div>
+                                                <small class="text-muted">@u.Email</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td><span class="role-badge role-@u.Role.Replace(" ", "_")">@u.Role</span></td>
+                                    <td>@(string.IsNullOrWhiteSpace(u.Department) ? "—" : u.Department)</td>
+                                    <td>
+                                        @if (u.LastLogin.HasValue)
+                                        {
+                                            <div class="time-main">@u.LastLogin.Value.ToLocalTime().ToString("MMM dd, yyyy HH:mm")</div>
+                                            <div class="time-sub">@Ago(u.LastLogin.Value)</div>
+                                        }
+                                        else
+                                        {
+                                            <span class="state-badge state-never">Never</span>
+                                        }
+                                    </td>
+                                    <td>@u.LoginCount</td>
+                                    <td class="@(u.FailedCount > 0 ? "count-fail" : "")">@u.FailedCount</td>
+                                    <td>
+                                        <span class="state-badge @(u.IsActive ? "state-active" : "state-inactive")">
+                                            @(u.IsActive ? "Active" : "Inactive")
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="@HistoryUrl(u.Email)" class="btn-drill">
+                                            <i class="bi bi-clock-history me-1"></i>History
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="px-4 py-3 border-top">
+                    <small class="text-muted">Showing @userRows.Count user@(userRows.Count == 1 ? "" : "s")</small>
+                </div>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <i class="bi bi-people"></i>
+                    <p class="mb-0">No users found@(string.IsNullOrWhiteSpace(search) ? "." : $" for \"{search}\".")</p>
+                </div>
+            }
+        }
+        else if (logs.Any())
+        {
+            @* ───── EVENT LIST (Login Activity + All Activity) ───── *@
+            <div class="table-responsive">
+                <table class="log-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            @if (view == "all")
+                            {
+                                <th>Table</th>
+                            }
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var log in logs)
+                        {
+                            var email = log.ApplicationUser?.Email ?? "Unknown";
+                            var display = string.IsNullOrWhiteSpace(log.ApplicationUser?.FullName) ? email : log.ApplicationUser!.FullName;
+                            <tr>
+                                <td>
+                                    <div class="time-main">@log.Timestamp.ToLocalTime().ToString("MMM dd, yyyy HH:mm")</div>
+                                    <div class="time-sub">@Ago(log.Timestamp)</div>
+                                </td>
+                                <td>
+                                    <div class="user-cell">
+                                        <span class="user-avatar">@Initial(display)</span>
+                                        <div>
+                                            <div class="user-name">@display</div>
+                                            <small class="text-muted">@email</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="act-badge @ActClass(log.ActionType)">@log.ActionType</span></td>
+                                @if (view == "all")
+                                {
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(log.TableAffected))
+                                        {
+                                            <span class="table-chip">@log.TableAffected</span>
+                                        }
+                                    </td>
+                                }
+                                <td class="details-cell">@(string.IsNullOrWhiteSpace(log.Details) ? "—" : log.Details)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-4 py-3 border-top">
+                <small class="text-muted">
+                    Showing <strong>@logs.Count</strong> of <strong>@total</strong> records
+                    @if (!string.IsNullOrWhiteSpace(search))
+                    {
+                        <span>matching "<em>@search</em>"</span>
+                    }
+                </small>
+
+                @if (totalPages > 1)
+                {
+                    <div class="pager">
+                        <a class="@(page <= 1 ? "disabled" : "")" href="@PageUrl(view, page - 1)">Previous</a>
+                        @for (int p = Math.Max(1, page - 2); p <= Math.Min(totalPages, page + 2); p++)
+                        {
+                            if (p == page)
+                            {
+                                <span class="current">@p</span>
+                            }
+                            else
+                            {
+                                <a href="@PageUrl(view, p)">@p</a>
+                            }
+                        }
+                        <a class="@(page >= totalPages ? "disabled" : "")" href="@PageUrl(view, page + 1)">Next</a>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="bi bi-journal-x"></i>
+                <p class="mb-0">No audit logs found@(string.IsNullOrWhiteSpace(search) ? "." : $" for \"{search}\".")</p>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const input = document.getElementById('searchInput');
+        let timer;
+        input?.addEventListener('input', () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => document.getElementById('searchForm').submit(), 500);
+        });
+    </script>
+}
